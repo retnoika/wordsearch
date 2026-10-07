@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Word Search Maker</title>
+<style>
+  :root {
+    --ink: #1c1c1c;
+    --soft: #6b675f;
+    --line: #d9d5cd;
+    --paper: #faf9f6;
+    --accent: #24549c;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 1.2em 1em 3em;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+  .page-head, .controls, .output { max-width: 860px; margin-left: auto; margin-right: auto; }
+  .page-head { margin-bottom: 1.2em; }
+  h1 { font-size: 1.6em; margin: 0 0 0.2em; }
+  h2 { font-size: 1.15em; margin: 1em 0 0.4em; }
+  .hint { font-weight: 400; color: var(--soft); font-size: 0.8em; }
+
+  .controls {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.1em 1.2em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9em;
+  }
+  label.big { font-weight: 600; display: flex; flex-direction: column; gap: 0.25em; }
+  textarea, input[type="number"], input[type="text"] {
+    font: inherit;
+    font-size: 16px;
+    padding: 0.5em 0.6em;
+    border: 1px solid #b9b4a9;
+    border-radius: 8px;
+    width: 100%;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { min-height: 9em; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .row { display: flex; flex-wrap: wrap; gap: 1em; }
+  .row label { flex: 1 1 8em; display: flex; flex-direction: column; gap: 0.25em; font-weight: 600; }
+  .checks label { flex: 0 1 auto; flex-direction: row; align-items: center; gap: 0.5em; font-weight: 500; }
+  input[type="checkbox"] { width: 1.25em; height: 1.25em; }
+  .buttons { gap: 0.8em; }
+  button {
+    font: inherit;
+    font-size: 1em;
+    padding: 0.55em 1.3em;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:hover { background: #1b4076; }
+  #print-btn, #copy-btn { background: #fff; color: var(--accent); }
+
+  .msg {
+    color: #8a4b00;
+    background: #fff4e0;
+    border: 1px solid #e8c98f;
+    border-radius: 8px;
+    padding: 0.5em 0.8em;
+    margin: 0;
+  }
+  .msg:empty { padding: 0; border-color: transparent; background: none; }
+
+  .output { margin-top: 1.5em; }
+  .puzzle-title { text-align: center; margin: 0 0 0.6em; }
+  .gridwrap { overflow-x: auto; padding-bottom: 0.4em; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 12), var(--cell, 2.4rem));
+    width: max-content;
+    margin: 0 auto;
+    background: #fff;
+    border: 2px solid #333;
+  }
+  .cell {
+    width: var(--cell, 2.4rem);
+    height: var(--cell, 2.4rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: calc(var(--cell, 2.4rem) * 0.52);
+    border-right: 1px solid #cfcabf;
+    border-bottom: 1px solid #cfcabf;
+  }
+  .stats { text-align: center; color: var(--soft); }
+
+  .wordlist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    columns: 3;
+    column-gap: 2em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .wordlist li { break-inside: avoid; padding: 0.15em 0; }
+
+  .warnbox { border: 2px solid #a4494185; background: #fdf0ef; border-radius: 10px; padding: 0.8em 1em; margin-top: 1.2em; }
+  .warnbox h2 { margin: 0 0 0.3em; font-size: 1.05em; }
+  .warnbox ul { list-style: none; margin: 0; padding: 0; }
+  .warnbox li { padding: 0.15em 0; }
+
+  .answers { margin-top: 1.6em; border-top: 2px dashed var(--line); padding-top: 1em; }
+  .note { color: var(--soft); font-size: 0.9em; margin: 0.2em 0 0.8em; }
+  .answerlist { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 2.5em; font-size: 0.95em; }
+  .answerlist li { break-inside: avoid; padding: 0.18em 0; }
+  .answerlist .w, .warnbox .w { font-weight: 700; letter-spacing: 0.05em; }
+
+  .hidden { display: none; }
+
+  @media (max-width: 640px) {
+    .wordlist { columns: 2; }
+    .answerlist { columns: 1; }
+  }
+
+  @media print {
+    @page { size: A4; margin: 14mm; }
+    body { background: #fff; padding: 0; }
+    .page-head, .controls, .no-print, .stats { display: none !important; }
+    .output { margin: 0; max-width: none; }
+    .gridwrap { overflow: visible; padding: 0; }
+    .grid {
+      /* inline --cell comes from the screen sizing; force a print-fitting size */
+      --cell: min(calc(170mm / var(--cols, 12)), 30px) !important;
+      border-color: #000;
+    }
+    .cell { color: #000; border-color: #9a9a9a; }
+    .wordsection h2 { margin-top: 1em; }
+    .wordlist { columns: 4; }
+    .answers { page-break-before: always; border-top: none; padding-top: 0; }
+    .warnbox { background: none; border: 1.5pt solid #000; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Word Search Maker</h1>
+  <p>Type your words, pick a size, press Generate — then print it.</p>
+</header>
+
+<form id="puzzle-form" class="controls" autocomplete="off">
+  <label class="big" for="words">Words
+    <span class="hint">one per line — commas or spaces also work</span>
+  </label>
+  <textarea id="words" rows="7" spellcheck="false" placeholder="MOON&#10;LANTERN&#10;STAMP"></textarea>
+
+  <div class="row">
+    <label>Rows
+      <input type="number" id="rows" min="5" max="30" step="1" value="12">
+    </label>
+    <label>Columns
+      <input type="number" id="cols" min="5" max="30" step="1" value="12">
+    </label>
+    <label>Seed
+      <span class="hint">optional — same seed, same puzzle</span>
+      <input type="number" id="seed" step="1">
+    </label>
+  </div>
+
+  <div class="row checks">
+    <label><input type="checkbox" id="diagonals" checked> Allow diagonals</label>
+    <label><input type="checkbox" id="backwards" checked> Allow backwards</label>
+  </div>
+
+  <label class="big" for="title">Puzzle title
+    <span class="hint">optional — prints above the grid</span>
+  </label>
+  <input type="text" id="title" placeholder="Autumn word search">
+
+  <div class="row buttons">
+    <button type="submit" class="primary">Generate</button>
+    <button type="button" id="print-btn" class="no-print">Print</button>
+    <button type="button" id="copy-btn" class="no-print">Copy answer key</button>
+  </div>
+  <p id="msg" class="msg" role="status"></p>
+</form>
+
+<main id="output" class="output hidden">
+  <h2 id="puzzle-title" class="puzzle-title hidden"></h2>
+
+  <div class="gridwrap">
+    <div id="grid" class="grid" aria-label="word search grid"></div>
+  </div>
+  <p id="stats" class="stats"></p>
+
+  <section class="wordsection">
+    <h2>Find these words</h2>
+    <ul id="wordlist" class="wordlist"></ul>
+  </section>
+
+  <div id="skippedbox" class="warnbox hidden">
+    <h2>Not placed</h2>
+    <ul id="skippedlist"></ul>
+  </div>
+
+  <div id="conflictbox" class="warnbox hidden">
+    <h2>Check before printing</h2>
+    <ul id="conflictlist"></ul>
+  </div>
+
+  <section class="answers">
+    <h2>Answer key</h2>
+    <p class="note">Rows are counted from the top and columns from the left, starting at 1.
+      The direction shows which way to read each word.</p>
+    <ul id="answerlist" class="answerlist"></ul>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+/* ============================================================
+ * Pure puzzle logic — no DOM access below this line until the
+ * UI wiring section. Mirrors wordsearch.py: longest word first,
+ * up to 500 random attempts per word, a cell may be used only
+ * if it is empty or already holds the same letter, leftovers
+ * filled with random uppercase letters.
+ * ============================================================ */
+
+var ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+var ALL_DIRS = [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
+var DIR_NAMES = {
+  "0,1": "across →", "1,0": "down ↓", "1,1": "down-right ↘", "1,-1": "down-left ↙",
+  "0,-1": "left ←", "-1,0": "up ↑", "-1,-1": "up-left ↖", "-1,1": "up-right ↗"
+};
+
+/* Deterministic PRNG (mulberry32). Same seed + same inputs => identical puzzle. */
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* Uppercase, strip non-letters, drop blanks and duplicates (first wins). */
+function normalizeWords(input) {
+  var raw = Array.isArray(input) ? input.join("\n") : String(input == null ? "" : input);
+  var seen = {}, out = [];
+  raw.split(/[\s,]+/).forEach(function (tok) {
+    var w = tok.toUpperCase().replace(/[^A-Z]/g, "");
+    if (w && !seen[w]) { seen[w] = 1; out.push(w); }
+  });
+  return out;
+}
+
+/* Directions as [dr, dc]. Same set wordsearch.py builds, deduplicated. */
+function makeDirs(diagonals, backwards) {
+  var dirs = [[1, 0], [0, 1]];
+  if (diagonals) dirs.push([1, 1], [1, -1]);
+  if (backwards) {
+    dirs.forEach(function (d) { dirs.push([-d[0], -d[1]]); });
+  }
+  return dirs;
+}
+
+/* Read `len` letters from grid starting at row/col stepping dr/dc; null if off-grid. */
+function readWord(grid, row, col, dr, dc, len) {
+  var rows = grid.length, cols = grid[0].length, s = "";
+  for (var i = 0; i < len; i++) {
+    var r = row + i * dr, c = col + i * dc;
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
+    s += grid[r][c];
+  }
+  return s;
+}
+
+/* Verify every placement actually spells its word in the grid. Pure. */
+function verifyPlacements(grid, placements) {
+  var failures = [];
+  placements.forEach(function (pl) {
+    var read = readWord(grid, pl.row, pl.col, pl.dr, pl.dc, pl.word.length);
+    if (read !== pl.word) {
+      failures.push({
+        word: pl.word, row: pl.row, col: pl.col, dr: pl.dr, dc: pl.dc,
+        read: read == null ? "(out of bounds)" : read
+      });
+    }
+  });
+  return { checked: placements.length, failures: failures };
+}
+
+/* True when the occurrence lies entirely inside a placement of another word
+ * (e.g. PEN sitting inside placed PENPAL) — those letters are not filler. */
+function embeddedInOther(owners, placements, row, col, dr, dc, len, word) {
+  var first = owners[row + "," + col];
+  if (!first) return false;
+  if (placements[first.pi].word === word) return false;
+  for (var i = 0; i < len; i++) {
+    var o = owners[(row + i * dr) + "," + (col + i * dc)];
+    if (!o || o.pi !== first.pi || o.i !== first.i + i) return false;
+  }
+  return true;
+}
+
+/* Occurrences of listed words that are neither keyed placements nor embedded
+ * in another placement — i.e. accidental spellings, checked in all 8 directions. */
+function findConflicts(grid, placements, words) {
+  var owners = {};
+  placements.forEach(function (pl, pi) {
+    for (var i = 0; i < pl.word.length; i++) {
+      owners[(pl.row + i * pl.dr) + "," + (pl.col + i * pl.dc)] = { pi: pi, i: i };
+    }
+  });
+  var byWord = {};
+  placements.forEach(function (pl) {
+    (byWord[pl.word] || (byWord[pl.word] = [])).push(pl);
+  });
+  var conflicts = [];
+  words.forEach(function (w) {
+    if (w.length < 2) return; /* 1-letter words occur everywhere; not checkable */
+    for (var r = 0; r < grid.length; r++) {
+      for (var c = 0; c < grid[0].length; c++) {
+        for (var d = 0; d < ALL_DIRS.length; d++) {
+          var dr = ALL_DIRS[d][0], dc = ALL_DIRS[d][1];
+          if (readWord(grid, r, c, dr, dc, w.length) !== w) continue;
+          var covered = (byWord[w] || []).some(function (pl) {
+            return pl.row === r && pl.col === c && pl.dr === dr && pl.dc === dc;
+          });
+          if (!covered) {
+            covered = embeddedInOther(owners, placements, r, c, dr, dc, w.length, w);
+          }
+          if (!covered) {
+            conflicts.push({ word: w, row: r, col: c, dr: dr, dc: dc, direction: DIR_NAMES[dr + "," + dc] });
+          }
+        }
+      }
+    }
+  });
+  return conflicts;
+}
+
+/* generatePuzzle(words, rows, cols, opts) -> { grid, placements, skipped, ... }
+ * opts = { diagonals, backwards, seed }. rows/cols in placements are 0-based;
+ * the UI displays them as 1-based. Placement strategy mirrors wordsearch.py. */
+function generatePuzzle(words, rows, cols, opts) {
+  opts = opts || {};
+  rows = Math.max(1, Math.floor(Number(rows) || 1));
+  cols = Math.max(1, Math.floor(Number(cols) || 1));
+  var list = normalizeWords(words);
+  var dirs = makeDirs(!!opts.diagonals, !!opts.backwards);
+
+  var seedUsed;
+  if (opts.seed === undefined || opts.seed === null || String(opts.seed).trim() === "") {
+    seedUsed = Math.floor(Math.random() * 4294967296);
+  } else {
+    seedUsed = Number(opts.seed) >>> 0;
+  }
+  var rnd = mulberry32(seedUsed);
+
+  var grid = [];
+  for (var r = 0; r < rows; r++) {
+    var row = [];
+    for (var c = 0; c < cols; c++) row.push(null);
+    grid.push(row);
+  }
+
+  /* longest straight line any enabled direction allows */
+  var maxFit = 0;
+  dirs.forEach(function (d) {
+    var cap = d[0] === 0 ? cols : (d[1] === 0 ? rows : Math.min(rows, cols));
+    if (cap > maxFit) maxFit = cap;
+  });
+
+  var placements = [];
+  var placed = {};
+  var skipReason = {};
+  list.slice().sort(function (a, b) { return b.length - a.length; }).forEach(function (w) {
+    if (w.length > maxFit) { skipReason[w] = "longer than the grid allows"; return; }
+    for (var attempt = 0; attempt < 500; attempt++) {
+      var dir = dirs[Math.floor(rnd() * dirs.length)];
+      var r0 = Math.floor(rnd() * rows);
+      var c0 = Math.floor(rnd() * cols);
+      var ok = true;
+      for (var i = 0; i < w.length; i++) {
+        var rr = r0 + i * dir[0], cc = c0 + i * dir[1];
+        if (rr < 0 || rr >= rows || cc < 0 || cc >= cols) { ok = false; break; }
+        var g = grid[rr][cc];
+        if (g !== null && g !== w.charAt(i)) { ok = false; break; }
+      }
+      if (!ok) continue;
+      for (var j = 0; j < w.length; j++) {
+        grid[r0 + j * dir[0]][c0 + j * dir[1]] = w.charAt(j);
+      }
+      placed[w] = true;
+      placements.push({
+        word: w, row: r0, col: c0, dr: dir[0], dc: dir[1],
+        direction: DIR_NAMES[dir[0] + "," + dir[1]]
+      });
+      break;
+    }
+    if (!placed[w] && !skipReason[w]) {
+      skipReason[w] = "no room found after 500 tries — the grid may be too full";
+    }
+  });
+
+  var skipped = list
+    .filter(function (w) { return skipReason[w]; })
+    .map(function (w) { return { word: w, reason: skipReason[w] }; });
+
+  /* Filler: re-roll up to 50 times so random letters never accidentally
+   * spell a listed word outside its keyed placement (or inside another word). */
+  var baseGrid = grid.map(function (grow) { return grow.slice(); });
+  var conflicts = [];
+  var finalGrid = grid;
+  for (var roll = 0; roll < 50; roll++) {
+    var g = baseGrid.map(function (grow) { return grow.slice(); });
+    for (var fr = 0; fr < rows; fr++) {
+      for (var fc = 0; fc < cols; fc++) {
+        if (g[fr][fc] === null) g[fr][fc] = ALPHABET.charAt(Math.floor(rnd() * 26));
+      }
+    }
+    conflicts = findConflicts(g, placements, list);
+    finalGrid = g;
+    if (conflicts.length === 0) break;
+  }
+
+  var verify = verifyPlacements(finalGrid, placements);
+  return {
+    grid: finalGrid,
+    placements: placements,
+    skipped: skipped,
+    conflicts: conflicts,
+    verify: verify,
+    seedUsed: seedUsed
+  };
+}
+
+var WS = { generatePuzzle: generatePuzzle, verifyPlacements: verifyPlacements, normalizeWords: normalizeWords };
+if (typeof module !== "undefined" && module.exports) { module.exports = WS; }
+if (typeof window !== "undefined") { window.WS = WS; }
+
+/* ============================================================
+ * UI wiring
+ * ============================================================ */
+
+var current = null; /* { result, cols } of the last generate */
+
+function $(id) { return document.getElementById(id); }
+
+function setMsg(text) { $("msg").textContent = text; }
+
+function alpha(a, b) { return a < b ? -1 : (a > b ? 1 : 0); }
+
+function readBounded(id, label, notices) {
+  var n = parseInt($(id).value, 10);
+  if (isNaN(n)) n = 12;
+  if (n < 5) { notices.push(label + " must be 5 or more; used 5."); return 5; }
+  if (n > 30) { notices.push(label + " must be 30 or less; used 30."); return 30; }
+  return n;
+}
+
+function applyCellSize() {
+  if (!current) return;
+  var avail = 680;
+  if (window.innerWidth) avail = Math.min(680, window.innerWidth - 40);
+  var cell = Math.max(13, Math.min(44, Math.floor(avail / current.cols)));
+  $("grid").style.setProperty("--cell", cell + "px");
+}
+
+var resizeTimer = null;
+function scheduleResize() {
+  if (resizeTimer) clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function () { resizeTimer = null; applyCellSize(); }, 150);
+}
+
+function answerText(p) {
+  return p.word + " — row " + (p.row + 1) + ", col " + (p.col + 1) + ", " + p.direction;
+}
+
+function renderPuzzle(result, rows, cols, wordsIn) {
+  $("output").classList.remove("hidden");
+
+  var title = $("title").value.trim();
+  var titleEl = $("puzzle-title");
+  titleEl.textContent = title;
+  titleEl.classList.toggle("hidden", !title);
+
+  var gridEl = $("grid");
+  gridEl.setAttribute("aria-label", "word search grid, " + rows + " rows, " + cols + " columns");
+  var cells = [];
+  result.grid.forEach(function (row) {
+    row.forEach(function (ch) { cells.push('<div class="cell">' + ch + "</div>"); });
+  });
+  gridEl.style.setProperty("--cols", String(cols));
+  applyCellSize();
+  gridEl.innerHTML = cells.join("");
+
+  $("wordlist").innerHTML = result.placements.map(function (p) { return p.word; })
+    .sort(alpha).map(function (w) { return "<li>" + w + "</li>"; }).join("");
+
+  var key = result.placements.slice().sort(function (a, b) { return alpha(a.word, b.word); });
+  $("answerlist").innerHTML = key.map(function (p) {
+    return "<li><span class='w'>" + p.word + "</span> — row " + (p.row + 1) +
+           ", col " + (p.col + 1) + ", " + p.direction + "</li>";
+  }).join("");
+
+  var sb = $("skippedbox");
+  sb.classList.toggle("hidden", result.skipped.length === 0);
+  $("skippedlist").innerHTML = result.skipped.map(function (s) {
+    return "<li><span class='w'>" + s.word + "</span> — " + s.reason + "</li>";
+  }).join("");
+
+  var placedSet = {};
+  result.placements.forEach(function (p) { placedSet[p.word] = 1; });
+  var problems = result.conflicts.map(function (c) {
+    var verb = placedSet[c.word] ? "appears an extra time at" : "is accidentally spelled at";
+    return "<li><span class='w'>" + c.word + "</span> " + verb + " row " + (c.row + 1) +
+           ", col " + (c.col + 1) + " (" + c.direction + ")</li>";
+  });
+  if (result.verify && result.verify.failures.length) {
+    problems.push("<li>Internal check found a mismatch in the answer key — please regenerate.</li>");
+  }
+  var cb = $("conflictbox");
+  cb.classList.toggle("hidden", problems.length === 0);
+  $("conflictlist").innerHTML = problems.join("");
+
+  $("stats").textContent = result.placements.length + " of " + wordsIn.length + " words placed" +
+    (result.skipped.length ? " — see Not placed below" : "");
+}
+
+function onGenerate() {
+  var words = normalizeWords($("words").value);
+  if (words.length === 0) {
+    current = null;
+    $("output").classList.add("hidden");
+    setMsg("Type some words first — one per line.");
+    return;
+  }
+  var notices = [];
+  var rows = readBounded("rows", "Rows", notices);
+  var cols = readBounded("cols", "Columns", notices);
+  var result = generatePuzzle(words, rows, cols, {
+    diagonals: $("diagonals").checked,
+    backwards: $("backwards").checked,
+    seed: $("seed").value.trim()
+  });
+  current = { result: result, cols: cols };
+  renderPuzzle(result, rows, cols, words);
+  saveInputs();
+  setMsg(notices.join(" "));
+}
+
+function copyAnswerKey() {
+  if (!current) { setMsg("Generate a puzzle first."); return; }
+  var text = current.result.placements
+    .slice().sort(function (a, b) { return alpha(a.word, b.word); })
+    .map(answerText).join("\n");
+  function done() { setMsg("Answer key copied."); }
+  function fallback() {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } catch (err) {
+      setMsg("Couldn't copy automatically — select the answer key and copy it by hand.");
+    }
+    document.body.removeChild(ta);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } else {
+    fallback();
+  }
+}
+
+function saveInputs() {
+  try {
+    localStorage.setItem("wordsearch.inputs", JSON.stringify({
+      words: $("words").value, rows: $("rows").value, cols: $("cols").value,
+      seed: $("seed").value, title: $("title").value,
+      diagonals: $("diagonals").checked, backwards: $("backwards").checked
+    }));
+  } catch (e) { /* Safari private browsing: fine to skip */ }
+}
+
+function loadSaved() {
+  try {
+    var raw = localStorage.getItem("wordsearch.inputs");
+    if (!raw) return;
+    var s = JSON.parse(raw);
+    ["words", "rows", "cols", "seed", "title"].forEach(function (k) {
+      if (typeof s[k] === "string" && $(k)) $(k).value = s[k];
+    });
+    if (typeof s.diagonals === "boolean") $("diagonals").checked = s.diagonals;
+    if (typeof s.backwards === "boolean") $("backwards").checked = s.backwards;
+  } catch (e) { /* ignore corrupt saved input */ }
+}
+
+function wireUI() {
+  var form = $("puzzle-form");
+  if (!form) return;
+  loadSaved();
+  form.addEventListener("submit", function (e) { e.preventDefault(); onGenerate(); });
+  $("print-btn").addEventListener("click", function () { window.print(); });
+  $("copy-btn").addEventListener("click", copyAnswerKey);
+  window.addEventListener("resize", scheduleResize);
+}
+
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireUI);
+  } else {
+    wireUI();
+  }
+}
+</script>
+</body>
+</html>
