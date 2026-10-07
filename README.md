@@ -14,6 +14,31 @@ Opening it, printing it, and the full list of inputs are further down.
 
 ![The word search maker with a generated 12x12 puzzle](assets/screenshot.png)
 
+## Features
+
+- **Words your way** — type your own (one per line; commas or spaces also work) or
+  pick them from the built-in offline word bank: 39 topics with about 700 words
+  between them — autumn, tea, snail mail, garden, seeds, food, flowers, trees,
+  mushrooms, zodiac and two further astrology sets, and more. Topics answer to
+  synonyms too, so "fall" finds autumn.
+- **Grid your size** — rows and columns set separately (5–30 each), with
+  diagonals and backwards words as toggles.
+- **Reusable seeds** — the seed is optional; the same seed with the same words
+  rebuilds the identical puzzle, so you can reprint a sheet or make several
+  different sheets from one word list. The app shows the seed it used, so a
+  random puzzle can be reused too.
+- **Answer key** — row, column and direction for every placed word; printing
+  puts it on its own page.
+- **Nothing dropped silently** — in the app, words that do not fit are reported
+  on screen, and accidental extra spellings created by the random filler
+  letters are flagged.
+- **Print-ready** — A4 output ("Save as PDF" works), an optional puzzle title,
+  and your last inputs are remembered.
+- **One file, no strings** — the web app is a single self-contained HTML page:
+  no install, no build step, no dependencies, no network. It works offline, on
+  desktop, tablet and phone. A small command-line script (`wordsearch.py`)
+  does the same job in the terminal.
+
 ## Usage
 
 ```bash
