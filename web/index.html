@@ -75,6 +75,29 @@
   }
   .msg:empty { padding: 0; border-color: transparent; background: none; }
 
+  /* topic suggestions */
+  #suggestblock h2 { margin: 0 0 0.1em; font-size: 1.05em; }
+  .suggest-controls { align-items: flex-end; }
+  .suggest-controls label { flex: 1 1 9em; }
+  .suggest-controls label.wcount { flex: 0 1 6.5em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4em; }
+  .chips button { font-size: 0.85em; padding: 0.3em 0.75em; background: #fff; color: var(--accent); }
+  .suggestbox { border: 1px solid var(--line); border-radius: 8px; padding: 0.5em 0.9em 0.7em; }
+  .suggest-actions { display: flex; flex-wrap: wrap; gap: 0.6em; }
+  .suggest-actions button { font-size: 0.9em; padding: 0.4em 0.9em; background: #fff; color: var(--accent); }
+  .suggestbox p.hint { margin: 0.15em 0 0.4em; }
+  .suggestlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(9em, 1fr)); column-gap: 0.8em; }
+  .wordopt {
+    display: flex;
+    align-items: center;
+    gap: 0.55em;
+    min-height: 44px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
   .output { margin-top: 1.5em; }
   .puzzle-title { text-align: center; margin: 0 0 0.6em; }
   .gridwrap { overflow-x: auto; padding-bottom: 0.4em; }
@@ -159,6 +182,30 @@
     <span class="hint">one per line — commas or spaces also work</span>
   </label>
   <textarea id="words" rows="7" spellcheck="false" placeholder="MOON&#10;LANTERN&#10;STAMP"></textarea>
+
+  <div id="suggestblock">
+    <h2>Or pick words from a topic</h2>
+    <div class="row suggest-controls">
+      <label>Topic
+        <span class="hint">from the built-in word bank</span>
+        <input type="text" id="topic" placeholder="e.g. autumn">
+      </label>
+      <label class="wcount">How many
+        <input type="number" id="topic-count" min="3" max="20" step="1" value="12">
+      </label>
+      <button type="button" id="suggest-btn">Suggest words</button>
+    </div>
+    <p id="suggest-msg" class="msg" role="status"></p>
+    <div id="suggestchips" class="chips hidden"></div>
+    <div id="suggestbox" class="suggestbox hidden">
+      <div class="suggest-actions">
+        <button type="button" id="untick-btn">Untick all</button>
+        <button type="button" id="clear-btn">Clear suggestions</button>
+      </div>
+      <p class="hint">Unticked words are simply left out of the puzzle.</p>
+      <div id="suggestlist" class="suggestlist"></div>
+    </div>
+  </div>
 
   <div class="row">
     <label>Rows
@@ -444,7 +491,214 @@ function generatePuzzle(words, rows, cols, opts) {
   };
 }
 
-var WS = { generatePuzzle: generatePuzzle, verifyPlacements: verifyPlacements, normalizeWords: normalizeWords };
+/* ============================================================
+ * Topic suggestions — a bundled offline word bank. No network,
+ * no API: every topic below ships inside this file, and a topic
+ * that is missing is reported plainly with the list that exists.
+ * ============================================================ */
+
+var TOPIC_WORDS = {
+  "autumn": {
+    aliases: ["fall", "harvest"],
+    words: ["ACORN", "AMBER", "APPLE", "BREEZE", "CHESTNUT", "CONKER", "CRISP", "GOURD", "LEAVES", "MIGRATE", "MIST", "PUMPKIN", "RUSSET", "SCARF", "SQUIRREL", "TAWNY"]
+  },
+  "winter": {
+    aliases: ["snow", "cold"],
+    words: ["BLIZZARD", "BOOTS", "COCOA", "FROST", "GLOVES", "HIBERNATE", "ICICLE", "MITTENS", "SHIVER", "SKATE", "SLEDGE", "SNOWFLAKE", "SNOWMAN", "THAW", "TOBOGGAN", "WOOLLY"]
+  },
+  "spring": {
+    aliases: ["blossom"],
+    words: ["BUDS", "BULB", "CROCUS", "DAFFODIL", "DAISY", "HATCH", "LAMB", "MELT", "NEST", "PETAL", "PUDDLE", "RAINBOW", "SHOWER", "SPROUT", "TULIP", "WARMTH"]
+  },
+  "summer": {
+    aliases: ["holiday"],
+    words: ["BARBECUE", "CANOE", "HUMID", "ICED", "MELON", "MOSQUITO", "PICNIC", "SANDALS", "SHADE", "SOLSTICE", "SUNBURN", "SUNSCREEN", "SUNSHINE", "SWEATY", "WATERMELON", "WAVES"]
+  },
+  "garden": {
+    aliases: ["gardening", "allotment"],
+    words: ["BEETROOT", "BLOOM", "COMPOST", "DAHLIA", "DIGGING", "FENCE", "GREENHOUSE", "HEDGE", "HOE", "LAWN", "MOWER", "MULCH", "PRUNE", "SHED", "SHOVEL", "TROWEL", "WATERING", "WEEDS"]
+  },
+  "snail mail": {
+    aliases: ["mail club", "pen pal", "penpal", "letters", "post"],
+    words: ["ADDRESS", "AIRMAIL", "CALLIGRAPHY", "ENVELOPE", "INKWELL", "MAILBOX", "PARCEL", "PENFRIEND", "POSTAGE", "POSTCARD", "POSTMARK", "SEAL", "SIGNATURE", "STAMP", "STICKER", "WRITING"]
+  },
+  "tea": {
+    aliases: ["tea time", "afternoon tea"],
+    words: ["BISCUIT", "BREW", "CHAI", "CHAMOMILE", "CUPPA", "DARJEELING", "GINGER", "HONEY", "JASMINE", "KETTLE", "LEMON", "MUG", "OOLONG", "PORCELAIN", "SAUCER", "SCONES", "TEAPOT", "TEAHOUSE"]
+  },
+  "coffee": {
+    aliases: ["cafe", "espresso"],
+    words: ["ARABICA", "BEANS", "BLEND", "CAFFEINE", "CREMA", "DECAF", "DRIP", "FILTER", "GRINDER", "LATTE", "MOCHA", "MUG", "ROAST", "RISTRETTO", "STEAM", "SUGAR", "THERMOS"]
+  },
+  "books": {
+    aliases: ["reading", "library", "book club"],
+    words: ["AUTHOR", "BOOKMARK", "CHAPTER", "COVER", "FICTION", "GENRE", "HARDBACK", "LIBRARIAN", "NOVEL", "PAGES", "PAPERBACK", "PLOT", "POETRY", "PROLOGUE", "SHELF", "SPINE", "STORY", "TOME"]
+  },
+  "cats": {
+    aliases: ["kittens", "kitten"],
+    words: ["CALICO", "CATNIP", "CLAWS", "FELINE", "FURRY", "LITTER", "MEOW", "PAWS", "PERSIAN", "PROWL", "PURR", "SCRATCH", "SIAMESE", "TABBY", "TAIL", "WHISKERS"]
+  },
+  "dogs": {
+    aliases: ["puppy", "pups"],
+    words: ["BARK", "BEAGLE", "COLLAR", "FETCH", "GREYHOUND", "HOUND", "KENNEL", "LEASH", "MUTT", "POODLE", "RETRIEVER", "SNOUT", "SPANIEL", "TERRIER", "WAG", "WHINE", "WOOF"]
+  },
+  "halloween": {
+    aliases: ["spooky", "trick or treat"],
+    words: ["BAT", "BROOM", "CANDY", "CAULDRON", "COSTUME", "CREEPY", "GHOST", "GOBLIN", "GRAVE", "HAUNTED", "OWL", "POTION", "SKELETON", "SPIDER", "VAMPIRE", "WEB", "WITCH", "WIZARD"]
+  },
+  "christmas": {
+    aliases: ["xmas", "festive"],
+    words: ["ADVENT", "ANGEL", "BELLS", "CANDLE", "CAROL", "CRACKER", "ELVES", "GINGERBREAD", "HOLLY", "JINGLE", "MISTLETOE", "MULLED", "POINSETTIA", "REINDEER", "RIBBON", "SLEIGH", "TINSEL", "WREATH", "WRAPPING", "YULE"]
+  },
+  "beach": {
+    aliases: ["seaside", "coast"],
+    words: ["BARNACLE", "BUCKET", "CASTLE", "DRIFTWOOD", "DUNE", "JELLYFISH", "KELP", "LIFEGUARD", "PEBBLE", "SAND", "SEASHELL", "SHORE", "STARFISH", "SUNHAT", "SURF", "TIDES", "TOWEL", "URCHIN"]
+  },
+  "forest": {
+    aliases: ["woods", "woodland"],
+    words: ["BADGER", "BARK", "BRACKEN", "CANOPY", "DEER", "FERN", "FOXGLOVE", "HOLLOW", "LICHEN", "MOSS", "MUSHROOM", "OAK", "PINE", "RAVINE", "ROOTS", "TIMBER", "TRAIL", "UNDERGROWTH"]
+  },
+  "baking": {
+    aliases: ["cake", "cooking", "kitchen"],
+    words: ["APRON", "BATTER", "DOUGH", "FLOUR", "ICING", "KNEAD", "LOAF", "MEASURE", "OVEN", "RECIPE", "ROLLING", "SCOOP", "SIEVE", "SIFT", "SPATULA", "TIMER", "WHISK", "YEAST"]
+  },
+  "sewing": {
+    aliases: ["craft", "crafts", "stitching", "quilting"],
+    words: ["BOBBIN", "BUTTON", "COTTON", "DARNING", "FABRIC", "HEM", "NEEDLE", "PATCH", "PATTERN", "PINCUSHION", "PIECE", "QUILT", "SAMPLER", "SCISSORS", "SEAM", "STITCH", "TAPE", "THREAD", "THIMBLE", "ZIP"]
+  },
+  "birds": {
+    aliases: ["birdwatching", "garden birds"],
+    words: ["BEAK", "BINOCULARS", "BLACKBIRD", "FEATHER", "FLOCK", "MIGRATION", "NESTLING", "NUTHATCH", "ORNITHOLOGY", "PERCH", "PLUMAGE", "ROBIN", "SKYLARK", "SPARROW", "STARLING", "TALON", "WADER", "WINGS"]
+  },
+  "ocean": {
+    aliases: ["sea", "marine"],
+    words: ["ANCHOR", "CORAL", "CURRENT", "DOLPHIN", "HARBOUR", "ISLAND", "LAGOON", "LOBSTER", "PLANKTON", "REEF", "SALMON", "SEAL", "SEAWEED", "SHARK", "SHELLFISH", "SQUID", "TIDE", "WHALE"]
+  },
+  "space": {
+    aliases: ["stars", "astronomy"],
+    words: ["ASTEROID", "COMET", "COSMOS", "CRATER", "ECLIPSE", "GALAXY", "GRAVITY", "LAUNCH", "LUNAR", "METEOR", "NEBULA", "ORBIT", "PLANET", "ROCKET", "SATELLITE", "SHUTTLE", "SOLAR", "TELESCOPE", "UNIVERSE"]
+  },
+  "farm": {
+    aliases: ["farming", "countryside"],
+    words: ["BARN", "CHICKEN", "COW", "CROP", "FARMER", "FIELD", "GOAT", "HAY", "HEN", "HORSE", "MILKING", "ORCHARD", "PASTURE", "PIG", "PLOUGH", "SCARECROW", "SHEEP", "SILO", "STABLE", "TRACTOR", "WHEAT"]
+  },
+  "school": {
+    aliases: ["classroom", "back to school"],
+    words: ["BACKPACK", "BLACKBOARD", "CHALK", "DESK", "ERASER", "EXAM", "GLUE", "HOMEWORK", "LESSON", "LUNCHBOX", "MARKER", "NOTEBOOK", "PENCIL", "PLAYGROUND", "RULER", "SHARPENER", "TEACHER", "TIMETABLE", "UNIFORM"]
+  },
+  "birthday": {
+    aliases: ["party"],
+    words: ["BALLOON", "BANNER", "CANDLES", "CAKE", "CARD", "CELEBRATE", "CONFETTI", "CUPCAKE", "GAMES", "GIFT", "GUESTS", "HAT", "INVITE", "PRESENT", "SLICE", "SURPRISE"]
+  },
+  "rain": {
+    aliases: ["weather", "storm"],
+    words: ["CLOUD", "DAMP", "DOWNPOUR", "DRIZZLE", "FLOOD", "GALE", "HAIL", "LIGHTNING", "MONSOON", "OVERCAST", "SLUSH", "SOAKED", "SPLASH", "THUNDER", "UMBRELLA", "WATERPROOF", "WELLIES"]
+  },
+  "travel": {
+    aliases: ["trip", "journey", "adventure"],
+    words: ["AIRPORT", "BOARDING", "CAMERA", "CAMPING", "COMPASS", "EXPLORE", "HOSTEL", "ITINERARY", "LUGGAGE", "MAP", "PASSPORT", "SOUVENIR", "SUITCASE", "TICKET", "TOURIST", "VISA", "VOYAGE", "WANDER"]
+  },
+  "music": {
+    aliases: ["song", "instruments"],
+    words: ["ALBUM", "BANJO", "BASS", "CELLO", "CHORUS", "DRUM", "FLUTE", "GUITAR", "HARMONY", "LYRICS", "MELODY", "OCTAVE", "PIANO", "RHYTHM", "SINGER", "TEMPO", "TRUMPET", "UKULELE", "VIOLIN"]
+  },
+  "hygge": {
+    aliases: ["cozy", "cosy", "candlelight"],
+    words: ["BLANKET", "CANDLE", "COMFORT", "FIRESIDE", "FIRELIGHT", "FLUFFY", "HUSHED", "KNITTING", "LANTERN", "PEACEFUL", "PINECONE", "SLIPPERS", "SNUGGLE", "SOFTNESS", "SWEATER", "THROW", "TOASTY", "WOOLLEN"]
+  },
+  "seeds": {
+    aliases: ["seed swap", "planting"],
+    words: ["BEAN", "CUTTING", "GERMINATE", "GRAIN", "KERNEL", "PACKET", "POD", "POTTING", "PROPAGATE", "ROOT", "SEEDLING", "SOIL", "SOW", "SOWING", "SWAP", "VARIETY", "WATERING"]
+  },
+  "farmers market": {
+    aliases: ["market", "produce"],
+    words: ["ARTICHOKE", "ASPARAGUS", "BASKET", "CABBAGE", "CARROT", "CAULIFLOWER", "COURGETTE", "CRATE", "CUCUMBER", "GARLIC", "GREENGROCER", "JAM", "JARS", "LEEK", "ONION", "PARSNIP", "PLUMS", "POTATO", "RADISH", "RHUBARB", "SPINACH", "TURNIP", "VENDOR"]
+  },
+  "puzzle": {
+    aliases: ["word search", "crosswords"],
+    words: ["ANAGRAM", "BRAIN", "CLUES", "CROSSWORD", "DEDUCTION", "GRID", "HIDDEN", "HINT", "JIGSAW", "KEY", "LOGIC", "MAZE", "MYSTERY", "RIDDLE", "SEARCH", "SOLUTION", "SOLVE", "SUDOKU", "WORDSEARCH"]
+  }
+};
+
+/* lowercase, trimmed, punctuation to spaces, whitespace collapsed */
+function normaliseTopic(input) {
+  return String(input == null ? "" : input).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/* Exact topic key, then exact alias, then a substring match against keys and
+ * aliases in both directions ("autumn leaves" -> autumn, "pen pal" -> snail mail).
+ * Returns the topic key or null. */
+function matchTopic(input) {
+  var q = normaliseTopic(input);
+  if (!q) return null;
+  var keys = Object.keys(TOPIC_WORDS), i, j, aliases;
+  for (i = 0; i < keys.length; i++) {
+    if (keys[i] === q) return keys[i];
+  }
+  for (i = 0; i < keys.length; i++) {
+    aliases = TOPIC_WORDS[keys[i]].aliases;
+    for (j = 0; j < aliases.length; j++) {
+      if (aliases[j] === q) return keys[i];
+    }
+  }
+  for (i = 0; i < keys.length; i++) {
+    if (keys[i].indexOf(q) !== -1 || q.indexOf(keys[i]) !== -1) return keys[i];
+  }
+  for (i = 0; i < keys.length; i++) {
+    aliases = TOPIC_WORDS[keys[i]].aliases;
+    for (j = 0; j < aliases.length; j++) {
+      if (aliases[j].indexOf(q) !== -1 || q.indexOf(aliases[j]) !== -1) return keys[i];
+    }
+  }
+  return null;
+}
+
+function availableTopics() {
+  return Object.keys(TOPIC_WORDS).sort();
+}
+
+/* suggestWords(topic, count, opts) -> { matched, topic, words, available, reason }
+ * opts = { seed }: blank/absent seed picks at random (usually a fresh set each
+ * call), a given seed is reproducible. count >= bank size returns the whole bank. */
+function suggestWords(topic, count, opts) {
+  opts = opts || {};
+  var key = matchTopic(topic);
+  if (!key) {
+    var asked = String(topic == null ? "" : topic).trim() || "(nothing)";
+    return {
+      matched: false,
+      topic: asked,
+      words: [],
+      available: availableTopics(),
+      reason: "\u201c" + asked + "\u201d is not in the built-in word bank \u2014 try one of the topics below."
+    };
+  }
+  var bank = TOPIC_WORDS[key].words;
+  var n = Math.floor(Number(count));
+  if (!isFinite(n) || n < 0) n = 0;
+  var words;
+  if (n >= bank.length) {
+    words = bank.slice();
+  } else {
+    var seedUsed;
+    if (opts.seed === undefined || opts.seed === null || String(opts.seed).trim() === "") {
+      seedUsed = Math.floor(Math.random() * 4294967296);
+    } else {
+      seedUsed = Number(opts.seed) >>> 0;
+    }
+    var rnd = mulberry32(seedUsed);
+    var pool = bank.slice();
+    words = [];
+    for (var i = 0; i < n; i++) {
+      var j = i + Math.floor(rnd() * (pool.length - i));
+      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      words.push(pool[i]);
+    }
+  }
+  return { matched: true, topic: key, words: words, available: [], reason: "" };
+}
+
+var WS = { generatePuzzle: generatePuzzle, verifyPlacements: verifyPlacements, normalizeWords: normalizeWords, suggestWords: suggestWords };
 if (typeof module !== "undefined" && module.exports) { module.exports = WS; }
 if (typeof window !== "undefined") { window.WS = WS; }
 
@@ -587,6 +841,91 @@ function copyAnswerKey() {
   }
 }
 
+/* ---- topic suggestions ---- */
+
+var suggested = []; /* [{ word, ticked }] — every word ever suggested this panel */
+
+function rebuildWords() {
+  /* textarea = (hand-typed words that are not suggestion words) + (ticked suggestions) */
+  var fromSuggest = {};
+  suggested.forEach(function (r) { fromSuggest[r.word] = 1; });
+  var hand = normalizeWords($("words").value).filter(function (w) { return !fromSuggest[w]; });
+  var ticked = suggested.filter(function (r) { return r.ticked; }).map(function (r) { return r.word; });
+  $("words").value = hand.concat(ticked).join("\n");
+}
+
+function renderSuggestList() {
+  $("suggestlist").innerHTML = suggested.map(function (r) {
+    return '<label class="wordopt"><input type="checkbox" data-word="' + r.word + '"' +
+           (r.ticked ? " checked" : "") + "><span class='w'>" + r.word + "</span></label>";
+  }).join("");
+}
+
+function renderChips() {
+  $("suggestchips").innerHTML = availableTopics().map(function (t) {
+    return '<button type="button" class="chip" data-topic="' + t + '">' + t + "</button>";
+  }).join("");
+}
+
+function onSuggest() {
+  var n = parseInt($("topic-count").value, 10);
+  if (isNaN(n)) n = 12;
+  n = Math.max(3, Math.min(20, n));
+  $("topic-count").value = String(n);
+
+  var res = suggestWords($("topic").value, n);
+  if (!res.matched) {
+    $("suggest-msg").textContent = res.reason;
+    renderChips();
+    $("suggestchips").classList.remove("hidden");
+    return;
+  }
+  $("suggest-msg").textContent = "";
+  $("suggestchips").classList.add("hidden");
+
+  var known = {};
+  suggested.forEach(function (r) { known[r.word] = 1; });
+  res.words.forEach(function (w) {
+    if (!known[w]) { suggested.push({ word: w, ticked: true }); known[w] = 1; }
+  });
+  $("suggestbox").classList.remove("hidden");
+  renderSuggestList();
+  rebuildWords();
+}
+
+function wireSuggest() {
+  $("suggest-btn").addEventListener("click", onSuggest);
+  $("topic").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); onSuggest(); }
+  });
+  $("suggestlist").addEventListener("change", function (e) {
+    var w = e.target.getAttribute("data-word");
+    if (!w) return;
+    for (var i = 0; i < suggested.length; i++) {
+      if (suggested[i].word === w) { suggested[i].ticked = e.target.checked; break; }
+    }
+    rebuildWords();
+  });
+  $("untick-btn").addEventListener("click", function () {
+    suggested.forEach(function (r) { r.ticked = false; });
+    Array.prototype.forEach.call($("suggestlist").querySelectorAll("input[type=checkbox]"), function (cb) {
+      cb.checked = false;
+    });
+    rebuildWords();
+  });
+  $("clear-btn").addEventListener("click", function () {
+    suggested = [];
+    $("suggestbox").classList.add("hidden");
+    rebuildWords();
+  });
+  $("suggestchips").addEventListener("click", function (e) {
+    var t = e.target.getAttribute("data-topic");
+    if (!t) return;
+    $("topic").value = t;
+    onSuggest();
+  });
+}
+
 function saveInputs() {
   try {
     localStorage.setItem("wordsearch.inputs", JSON.stringify({
@@ -617,6 +956,7 @@ function wireUI() {
   form.addEventListener("submit", function (e) { e.preventDefault(); onGenerate(); });
   $("print-btn").addEventListener("click", function () { window.print(); });
   $("copy-btn").addEventListener("click", copyAnswerKey);
+  wireSuggest();
   window.addEventListener("resize", scheduleResize);
 }
 
