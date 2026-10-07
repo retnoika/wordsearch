@@ -9,7 +9,10 @@ Two ways to use it:
 - **Command line** — `wordsearch.py`. Turns a word list into a grid plus a coordinate answer key.
 
 Opening it, printing it, and the full list of inputs are further down.
+
 **Try it in your browser:** <https://retnoika.github.io/wordsearch/> — nothing to install, works on desktop, tablet and phone.
+
+![The word search maker with a generated 12x12 puzzle](assets/screenshot.png)
 
 ## Usage
 
