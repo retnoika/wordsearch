@@ -50,9 +50,7 @@ Inputs:
 
 - **Words** — one per line; commas or spaces also work. Everything is
   uppercased, stripped of non-letters, and de-duplicated.
-- **Or pick words from a topic** — type a topic (e.g. autumn, tea, space) and
-  tick suggestions from a built-in offline word bank, so coverage is limited to
-  the topics bundled in the page; the words you tick drop straight into the list.
+- **Or pick words from a topic** — type a theme (e.g. autumn, tea) or any single word from the built-in offline word bank (e.g. pumpkin) and tick the suggestions; coverage is limited to the bundled topics.
 - **Rows / Columns** — grid size, 5–30 each (default 12 × 12).
 - **Allow diagonals / Allow backwards** — which directions words may run.
 - **Seed** — optional. The same seed with the same inputs always rebuilds the

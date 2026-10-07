@@ -625,9 +625,9 @@ function normaliseTopic(input) {
   return String(input == null ? "" : input).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-/* Exact topic key, then exact alias, then a substring match against keys and
- * aliases in both directions ("autumn leaves" -> autumn, "pen pal" -> snail mail).
- * Returns the topic key or null. */
+/* Exact topic key, then exact alias, then an exact word from any bank, then a
+ * substring match against keys and aliases in both directions ("autumn leaves"
+ * -> autumn, "pen pal" -> snail mail). Returns the topic key or null. */
 function matchTopic(input) {
   var q = normaliseTopic(input);
   if (!q) return null;
@@ -639,6 +639,14 @@ function matchTopic(input) {
     aliases = TOPIC_WORDS[keys[i]].aliases;
     for (j = 0; j < aliases.length; j++) {
       if (aliases[j] === q) return keys[i];
+    }
+  }
+  /* exact word from a topic's bank ("pumpkin" -> autumn); first topic in
+   * Object.keys order wins if a word sits in two banks (MUG: tea, coffee) */
+  for (i = 0; i < keys.length; i++) {
+    var bank = TOPIC_WORDS[keys[i]].words;
+    for (j = 0; j < bank.length; j++) {
+      if (bank[j].toLowerCase() === q) return keys[i];
     }
   }
   for (i = 0; i < keys.length; i++) {
