@@ -121,6 +121,16 @@
     border-bottom: 1px solid #cfcabf;
   }
   .stats { text-align: center; color: var(--soft); }
+  .seedline { text-align: center; color: var(--soft); margin: 0.2em 0 0; }
+  .seedline button {
+    font-size: 0.95em;
+    font-weight: 600;
+    padding: 0.55em 1em;
+    background: #fff;
+    color: var(--accent);
+    vertical-align: middle;
+  }
+  .seedline button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .wordlist {
     list-style: none;
@@ -245,6 +255,10 @@
     <div id="grid" class="grid" aria-label="word search grid"></div>
   </div>
   <p id="stats" class="stats"></p>
+  <p id="seedused" class="seedline no-print hidden">Seed used:
+    <button type="button" id="seed-use"></button>
+    <span class="hint" id="seed-hint">tap the number to put it in the Seed box</span>
+  </p>
 
   <section class="wordsection">
     <h2>Find these words</h2>
@@ -833,6 +847,10 @@ function renderPuzzle(result, rows, cols, wordsIn) {
 
   $("stats").textContent = result.placements.length + " of " + wordsIn.length + " words placed" +
     (result.skipped.length ? " — see Not placed below" : "");
+
+  $("seed-use").textContent = result.seedUsed;
+  $("seed-hint").textContent = "tap the number to put it in the Seed box";
+  $("seedused").classList.remove("hidden");
 }
 
 function onGenerate() {
@@ -1000,6 +1018,11 @@ function wireUI() {
   form.addEventListener("submit", function (e) { e.preventDefault(); onGenerate(); });
   $("print-btn").addEventListener("click", function () { window.print(); });
   $("copy-btn").addEventListener("click", copyAnswerKey);
+  $("seed-use").addEventListener("click", function () {
+    if (!current) return;
+    $("seed").value = current.result.seedUsed;
+    $("seed-hint").textContent = "now in the Seed box — Generate will rebuild this exact puzzle";
+  });
   wireSuggest();
   window.addEventListener("resize", scheduleResize);
 }
