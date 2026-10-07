@@ -62,6 +62,18 @@ Output: letters grid, then a coordinate list per word (the answer key).
 - Filler letters are random uppercase — later vowels may accidentally complete a word.
 - Plain-text output only — for a printable page, use the web app below.
 
+## What it deliberately doesn't do
+
+- **No online word lookup and no API keys.** The app never calls a service to invent
+  words and holds no credentials, so there is nothing to configure, nothing to pay
+  for, and nothing to break when a third party changes. The built-in word bank is a
+  starter set — type your own words for anything it does not cover.
+- **No accounts, no tracking, no telemetry.** Nothing you type leaves your browser;
+  there is no analytics script, no cookie, and no cookie banner because there is
+  nothing to consent to.
+- **No server and no dependencies.** It is one HTML file that runs offline. Copy it
+  anywhere, keep it forever.
+
 ## Web app
 
 `web/index.html` is a single self-contained page — all CSS and JavaScript are
