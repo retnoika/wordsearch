@@ -431,6 +431,8 @@ input, textarea {
   cursor: pointer;
 }
 
+.title-option { margin-top: 10px; }
+
 /* ============ Left Rail Fields ============ */
 .project-name-input {
   width: 100%;
@@ -802,7 +804,14 @@ input, textarea {
   margin: 0;
 }
 
-/* ============ Print: A4, page 1 puzzle + words, page 2 answer key ============ */
+/* Print-only sheet furniture: eyebrow, name/date line, rules, labels, footer */
+.print-eyebrow, .print-nameline, .print-rule, .print-wordlabel, .print-note, .print-footer, .print-answer-title {
+  display: none;
+}
+
+/* ============ Print: composed A4 sheet ============
+   Page 1: header block (eyebrow, title, optional name/date line, rule),
+           grid, word block, footer. Page 2: answer key with its own header. */
 @media print {
   @page { size: 210mm 297mm; margin: 14mm; }
 
@@ -832,18 +841,57 @@ input, textarea {
      print flow between the grid and the answer key. Exactly one copy. */
   .rail-center, .rail-right { display: contents; }
 
+  /* ---- sheet furniture: hidden on screen, printed here ---- */
+  .print-eyebrow {
+    display: block;
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: center;
+    margin: 0 0 5mm;
+  }
+
+  .print-rule { display: block; border-top: 1px solid #000; }
+
+  /* ---- page 1 header block ---- */
   .center-header { order: 1; padding: 0; margin: 0 0 6mm; }
-  .center-header:not(.has-title) { display: none; }
 
   #toolHead {
-    font-size: 21pt;
+    font-size: 25pt;
+    line-height: 1.15;
     color: #000;
-    margin: 0;
+    text-align: center;
+    margin: 0 0 2mm;
   }
 
   /* printed title is exactly what the user typed — no added punctuation */
   .center-header.has-title #toolHead::after { content: none; }
 
+  /* untitled sheet: no invented headline, but the eyebrow + rule still print */
+  .center-header:not(.has-title) #toolHead { display: none; }
+
+  .print-nameline {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 4mm;
+    font-size: 10pt;
+    color: var(--ink-muted);
+    margin: 3mm 0 4mm;
+  }
+
+  .print-blank {
+    display: inline-block;
+    border-bottom: 1px solid #555;
+    height: 5mm;
+  }
+
+  .print-blank-name { width: 60mm; }
+  .print-blank-date { width: 30mm; }
+
+  /* ---- grid ---- */
   .canvas-wrap { order: 2; padding: 0; }
 
   .canvas-scroll { overflow: visible; padding: 0; }
@@ -851,31 +899,79 @@ input, textarea {
   .canvas-stage {
     box-shadow: none;
     padding: 0;
-    margin: 0;
+    margin: 0 auto;
+    width: max-content;
   }
 
   .grid {
-    /* inline --cell comes from the screen sizing; force a print-fitting size */
-    --cell: min(calc(170mm / var(--cols, 12)), 30px) !important;
-    border-color: #000;
+    /* three limits at once: cell cap, width fit, height fit. When the
+       name/date line prints the height budget gives back its height so the
+       sheet still fits on one page. */
+    --grid-max-h: 190mm;
+    --cell: min(14mm, 178mm / var(--cols, 12), var(--grid-max-h) / var(--rows, 12)) !important;
+    border: 2.5pt solid #000;
+  }
+
+  body.name-line-on .grid {
+    /* square grids are width-bound (178mm/cols), so the height budget must
+       go meaningfully below 178mm/rows to buy back the name line's height */
+    --grid-max-h: 165mm;
   }
 
   .cell { color: #000; border-color: #9a9a9a; }
 
+  /* ---- word block + footer (promoted right-rail card) ---- */
   #wordCard {
     order: 3;
     background: none;
     border: none;
     padding: 0;
-    margin: 10mm 0 0;
+    margin: 6mm 0 0;
   }
 
-  #wordCard .card-title { color: #000; }
+  /* screen-only card heading never prints; the label below replaces it */
+  #wordCard .card-title { display: none; }
 
-  .wordlist { columns: 4; column-gap: 2em; }
+  .print-wordlabel {
+    display: block;
+    font-size: 9pt;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    text-align: center;
+    margin: 0 0 3mm;
+  }
 
-  .wordlist li { border-bottom: none; padding: 2px 0; }
+  .wordlist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(30mm, 1fr));
+    max-width: 150mm;
+    margin: 0 auto;
+  }
 
+  .wordlist li {
+    border-bottom: none;
+    padding: 1px 0;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .wordblock { break-inside: avoid; page-break-inside: avoid; }
+
+  .print-footer {
+    display: block;
+    margin-top: 6mm;
+  }
+
+  .print-footer-line {
+    font-size: 9pt;
+    color: var(--ink-muted);
+    text-align: center;
+    margin: 0 0 2.5mm;
+  }
+
+  /* ---- page 2: answer key ---- */
   #answers {
     order: 4;
     border-top: none;
@@ -885,7 +981,40 @@ input, textarea {
     break-before: page;
   }
 
-  #answers .section-title { color: #000; }
+  /* the eyebrow header replaces the screen heading; the print note replaces
+     the screen note (shortened to one line) */
+  #answers .section-title, #answers .note { display: none; }
+
+  #printAnswerTitle {
+    display: block;
+    font: 25pt/1.15 var(--f-serif);
+    color: #000;
+    text-align: center;
+    margin: 0 0 2mm;
+  }
+
+  .print-note {
+    display: block;
+    font-size: 9pt;
+    color: var(--ink-muted);
+    text-align: center;
+    margin: 3mm 0 6mm;
+  }
+
+  #answers .answerlist {
+    columns: 2;
+    column-gap: 10mm;
+    font-size: 10pt;
+  }
+
+  #answers .answerlist li { break-inside: avoid; padding: 2pt 0; }
+
+  /* three aligned columns per row: word / position / direction */
+  #answers .sep { display: none; }
+
+  .answerlist .w { display: inline-block; min-width: 30mm; }
+
+  .answerlist .pos { display: inline-block; min-width: 27mm; }
 }
 
 /* ============ Responsive: rails stack below 900px ============ */
@@ -1018,6 +1147,9 @@ input, textarea {
         <section class="rail-section">
           <label class="section-title" for="title">Puzzle Title</label>
           <input type="text" class="project-name-input" id="title" placeholder="Give name to your puzzle here">
+          <div class="check-row title-option">
+            <label><input type="checkbox" id="print-name-line"> Print a name and date line</label>
+          </div>
         </section>
 
         <section class="rail-section">
@@ -1091,7 +1223,13 @@ input, textarea {
     <!-- Centre rail: the puzzle -->
     <div class="rail rail-center">
       <div class="center-header" id="centerHeader">
+        <div class="print-eyebrow" aria-hidden="true">Word search</div>
         <h2 class="display-headline page-heading" id="toolHead">Your puzzle.</h2>
+        <div class="print-nameline" id="printNameLine" aria-hidden="true" hidden>
+          <span>Name</span><span class="print-blank print-blank-name"></span>
+          <span>Date</span><span class="print-blank print-blank-date"></span>
+        </div>
+        <div class="print-rule" aria-hidden="true"></div>
       </div>
 
       <div class="canvas-wrap">
@@ -1112,6 +1250,10 @@ input, textarea {
       </div>
 
       <section class="answers" id="answers" hidden>
+        <div class="print-eyebrow" aria-hidden="true">Answer key</div>
+        <div class="print-answer-title" id="printAnswerTitle" aria-hidden="true" hidden></div>
+        <div class="print-rule" aria-hidden="true"></div>
+        <p class="print-note" aria-hidden="true">Rows are counted from the top and columns from the left, both starting at 1.</p>
         <h3 class="section-title">Answer key</h3>
         <p class="note">Rows are counted from the top and columns from the left, starting at 1.
           The direction shows which way to read each word.</p>
@@ -1124,7 +1266,14 @@ input, textarea {
       <section class="rail-section card" id="wordCard">
         <h3 class="card-title">Find these words</h3>
         <p class="explainer" id="wordsEmpty">Generate a puzzle and the words to find will be listed here.</p>
-        <ul id="wordlist" class="wordlist"></ul>
+        <div class="wordblock">
+          <div class="print-wordlabel" id="printWordLabel" aria-hidden="true"></div>
+          <ul id="wordlist" class="wordlist"></ul>
+          <div class="print-footer" aria-hidden="true">
+            <p class="print-footer-line">Answer key on page 2</p>
+            <div class="print-rule"></div>
+          </div>
+        </div>
       </section>
 
       <section class="rail-section card" id="alertsCard" hidden>
@@ -1685,8 +1834,15 @@ function renderPuzzle(result, rows, cols, wordsIn) {
     row.forEach(function (ch) { cells.push('<div class="cell">' + ch + "</div>"); });
   });
   gridEl.style.setProperty("--cols", String(cols));
+  gridEl.style.setProperty("--rows", String(rows));
   applyCellSize();
   gridEl.innerHTML = cells.join("");
+
+  $("printWordLabel").textContent = "Words to find · " + result.placements.length;
+
+  var at = $("printAnswerTitle");
+  at.textContent = title;
+  at.hidden = !title;
 
   $("wordlist").innerHTML = result.placements.map(function (p) { return p.word; })
     .sort(alpha).map(function (w) { return "<li>" + w + "</li>"; }).join("");
@@ -1694,8 +1850,7 @@ function renderPuzzle(result, rows, cols, wordsIn) {
 
   var key = result.placements.slice().sort(function (a, b) { return alpha(a.word, b.word); });
   $("answerlist").innerHTML = key.map(function (p) {
-    return "<li><span class='w'>" + p.word + "</span> — row " + (p.row + 1) +
-           ", col " + (p.col + 1) + ", " + p.direction + "</li>";
+    return "<li><span class='w'>" + p.word + "</span><span class='pos'><span class='sep'> — </span>row " + (p.row + 1) + ", col " + (p.col + 1) + ", </span><span class='dir'>" + p.direction + "</span></li>";
   }).join("");
 
   var sb = $("skippedbox");
@@ -1984,7 +2139,8 @@ function saveInputs() {
     localStorage.setItem("wordsearch.inputs", JSON.stringify({
       words: $("words").value, rows: $("rows").value, cols: $("cols").value,
       seed: $("seed").value, title: $("title").value,
-      diagonals: toggleOn("diagonals"), backwards: toggleOn("backwards")
+      diagonals: toggleOn("diagonals"), backwards: toggleOn("backwards"),
+      nameLine: $("print-name-line").checked
     }));
   } catch (e) { /* Safari private browsing: fine to skip */ }
 }
@@ -1999,13 +2155,25 @@ function loadSaved() {
     });
     if (typeof s.diagonals === "boolean") $("diagonals").checked = s.diagonals;
     if (typeof s.backwards === "boolean") $("backwards").checked = s.backwards;
+    if (typeof s.nameLine === "boolean") {
+      $("print-name-line").checked = s.nameLine;
+      syncNameLine();
+    }
   } catch (e) { /* ignore corrupt saved input */ }
+}
+
+/* The name/date line exists only on the printed sheet. */
+function syncNameLine() {
+  $("printNameLine").hidden = !$("print-name-line").checked;
+  document.body.classList.toggle("name-line-on", $("print-name-line").checked);
 }
 
 function wireUI() {
   var form = $("puzzle-form");
   if (!form) return;
   loadSaved();
+  syncNameLine();
+  $("print-name-line").addEventListener("change", syncNameLine);
   form.addEventListener("submit", function (e) { e.preventDefault(); onGenerate(); });
   $("bPrint").addEventListener("click", function () {
     window.print();

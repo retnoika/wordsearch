@@ -32,8 +32,10 @@ Opening it, printing it, and the full list of inputs are further down.
 - **Nothing dropped silently** — in the app, words that do not fit are reported
   on screen, and accidental extra spellings created by the random filler
   letters are flagged.
-- **Print-ready** — A4 output ("Save as PDF" works), an optional puzzle title,
-  and your last inputs are remembered.
+- **Print-ready** — a composed A4 sheet in exactly two pages: the puzzle on
+  page 1, the answer key on page 2, at every size from 5x5 to 30x30. An
+  optional puzzle title, an optional name and date line, and your last inputs
+  are remembered.
 - **One file, no strings** — the page itself is a single self-contained HTML
   file with all CSS and JavaScript inline: no install, no build step, no
   network. The bundled Fraunces and DM Sans fonts sit next to it in
@@ -93,6 +95,10 @@ list plus any warnings in the right rail):
   uppercased, stripped of non-letters, and de-duplicated.
 - **Pick from a topic** — type a theme (e.g. autumn, tea) or any single word from the built-in offline word bank (e.g. pumpkin) and tick the suggestions, which appear under the input; coverage is limited to the bundled topics.
 - **Puzzle Layout** (Rows / Columns) — grid size, 5–30 each (default 12 × 12).
+- **Print a name and date line** — a checkbox under Puzzle Title, off by
+  default. When ticked, the printed sheet carries `Name ____` and `Date ____`
+  blanks in its header for classroom use. It affects printing only, and it is
+  remembered with the other inputs.
 - **Allow diagonals / Allow backwards** — checkboxes; which directions words may run.
 - **Seed** — optional. The same seed with the same inputs always rebuilds the
   identical puzzle; leave it blank for a fresh puzzle on every click.
@@ -106,11 +112,18 @@ The header's **Options** menu downloads the answer key as a `.txt` file, named
 after the puzzle title, or clears everything (title, words, topic picks, seed,
 size). The seed shown under the grid can be tapped to reuse it.
 
-Printing (**Save as PDF**, which opens the browser's print dialog) gives A4
-pages: the grid and word list on the first page, the answer key on its own
-page, with the header and rails hidden. Rows and columns in the answer key are
-counted from the top-left, starting at 1. **Save as PDF** stays disabled until
-a puzzle has been created.
+Printing (**Save as PDF**, which opens the browser's print dialog) gives a
+composed A4 sheet — exactly two pages at every size from 5x5 to 30x30. Page 1
+is the puzzle: a small `WORD SEARCH` eyebrow, the puzzle title, the optional
+name and date line, a hairline rule, the grid centred and sized to fill the
+printable width (cells up to 14 mm, so a 12 × 12 is about 168 mm wide), then
+`WORDS TO FIND · n` above the word list in columns, and a footer rule reading
+"Answer key on page 2". Page 2 is the answer key: `ANSWER KEY` with the puzzle
+title, so a printed key identifies its puzzle; one line noting that rows count
+from the top and columns from the left, both starting at 1; and the answers in
+two balanced column blocks as word / position / direction. The header and
+rails never print, and **Save as PDF** stays disabled until a puzzle has been
+created.
 
 ## How to open it (fastest first)
 
@@ -135,8 +148,9 @@ git pull                     # later, to pick up changes
 open web/index.html          # macOS; use xdg-open on Linux
 ```
 
-**Printing:** with a puzzle on screen press **Save as PDF** — A4 paper, page 1
-is the puzzle (title, grid, word list), page 2 is the answer key.
+**Printing:** with a puzzle on screen press **Save as PDF** — A4 paper, exactly
+two pages: page 1 is the puzzle (header, grid, word list, footer), page 2 is
+the answer key, carrying the puzzle title so the key identifies its puzzle.
 
 ## Credits
 
