@@ -4,284 +4,1131 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Word Search Maker</title>
+<link rel="icon" type="image/png" href="assets/word-game.png">
 <style>
-  :root {
-    --ink: #1c1c1c;
-    --soft: #6b675f;
-    --line: #d9d5cd;
-    --paper: #faf9f6;
-    --accent: #24549c;
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    padding: 1.2em 1em 3em;
-    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: var(--ink);
-    background: var(--paper);
-  }
-  .page-head, .controls, .output { max-width: 860px; margin-left: auto; margin-right: auto; }
-  .page-head { margin-bottom: 1.2em; }
-  h1 { font-size: 1.6em; margin: 0 0 0.2em; }
-  h2 { font-size: 1.15em; margin: 1em 0 0.4em; }
-  .hint { font-weight: 400; color: var(--soft); font-size: 0.8em; }
+/* ============ Font Faces ============ */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/Fraunces-Regular.woff2') format('woff2');
+}
 
-  .controls {
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/DMSans-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('assets/fonts/DMSans-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('assets/fonts/DMSans-SemiBold.woff2') format('woff2');
+}
+
+/**
+ * Word Search — editorial UI in the Bookletter family.
+ * Three-rail shell: 275px | fluid | 270px
+ */
+
+/* ============ Design Tokens ============ */
+:root {
+  /* -------- Palette: Candy Pink -------- */
+  --candy-pink-750: #DE505B;
+  --candy-pink-500: #E4717A;
+  --candy-pink-250: #EA9299;
+  --candy-pink-100: #F4C3C7;
+  --candy-pink-50:  #FDF5F5;
+
+  /* -------- Palette: Cornflower Blue -------- */
+  --cornflower-blue-750: #505BDE;
+  --cornflower-blue-500: #717AE4;
+  --cornflower-blue-250: #9299EA;
+  --cornflower-blue-100: #C3C7F4;
+  --cornflower-blue-50:  #F5F5FD;
+
+  /* -------- Palette: Neutrals -------- */
+  --a800: #161719;
+  --a500: #565A62;
+  --a70:  #B0B3B9;
+  --a30:  #D9DBDE;
+  --a0:   #FFFFFF;
+
+  /* -------- Semantic tokens -------- */
+  --surface: var(--a0);                    /* cards, rails, panels, page canvas */
+  --desk: var(--candy-pink-50);            /* app background, canvas surround */
+  --ink: var(--a800);                      /* primary text */
+  --ink-muted: var(--a500);                /* secondary text, labels, captions */
+  --line: var(--a30);                      /* hairline borders */
+  --line-strong: var(--a70);               /* emphasised rules, inactive edges */
+  --accent: var(--candy-pink-750);         /* primary buttons, active states, serif headlines */
+  --accent-hover: var(--candy-pink-500);   /* hover state for accent buttons */
+  --accent-on: #FFFFFF;                    /* text ON accent bg (white on Candy Pink 750) */
+  --accent-tint-wash: var(--candy-pink-50);  /* alert/notice panel background */
+  --accent-tint-rule: var(--candy-pink-250); /* alert/notice panel rule */
+  --focus: var(--cornflower-blue-750);     /* focus ring */
+  --info: var(--cornflower-blue-750);      /* informational states */
+  --info-tint: var(--cornflower-blue-50);  /* info panel background */
+  --info-wash: var(--cornflower-blue-100); /* info panel rule/wash */
+
+  /* -------- Page content colors (print output) -------- */
+  --paper: #fff;
+
+  /* -------- Typography - UI only -------- */
+  --f-serif: 'Fraunces', Georgia, serif;
+  --f-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --f-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* -------- Sizes -------- */
+  --header-h: 68px;
+  --rail-left: 275px;
+  --rail-right: 270px;
+  --border-w: 0.8px;
+  --radius: 0;
+}
+
+/* ============ Reset ============ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--desk);
+  color: var(--ink);
+  font: 13px/1.5 var(--f-sans);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-radius: var(--radius);
+}
+
+input, textarea {
+  font: inherit;
+  border-radius: var(--radius);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ============ App Shell ============ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ============ Header ============ */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: var(--header-h);
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: var(--border-w) solid var(--line);
+  flex-shrink: 0;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font: 20px var(--f-serif);
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============ Dropdown Menus ============ */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--surface);
+  border: var(--border-w) solid var(--line-strong);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+}
+
+.dropdown-menu-right {
+  left: auto;
+  right: 0;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 12px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dropdown-item:hover {
+  background: var(--desk);
+}
+
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--focus) inset;
+}
+
+/* ============ Main Three-Rail Layout ============ */
+.main {
+  display: grid;
+  grid-template-columns: var(--rail-left) 1fr var(--rail-right);
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ============ Rails ============ */
+.rail {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+}
+
+.rail-left {
+  background: var(--surface);
+  border-right: var(--border-w) solid var(--line);
+}
+
+.rail-center {
+  background: var(--desk);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.rail-right {
+  background: var(--surface);
+  border-left: var(--border-w) solid var(--line);
+}
+
+.rail-section {
+  margin-bottom: 24px;
+}
+
+.rail-section:last-child {
+  margin-bottom: 0;
+}
+
+/* ============ Typography ============ */
+.micro-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+
+.display-headline {
+  font: 28px/1.15 var(--f-serif);
+  color: var(--accent);
+  margin: 0 0 12px 0;
+}
+
+.section-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 10px 0;
+}
+
+.explainer {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin: 0 0 16px 0;
+  line-height: 1.45;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin: 4px 0;
+}
+
+/* ============ Buttons ============ */
+.btn-s {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border: var(--border-w) solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-s:hover {
+  background: var(--desk);
+}
+
+.btn-primary {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: var(--accent-on);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary:disabled:hover {
+  background: var(--accent);
+}
+
+.btn-accent {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 18px;
+  background: var(--accent);
+  color: var(--accent-on);
+  min-height: 44px;
+  width: 100%;
+}
+
+.btn-accent:hover {
+  background: var(--accent-hover);
+}
+
+/* ============ Button with Icon ============ */
+.btn-icon {
+  gap: 6px;
+}
+
+.icon {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.btn-icon .icon {
+  opacity: 0.8;
+}
+
+.dropdown-caret-icon {
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
+/* ============ Chips ============ */
+.chip {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 6px 10px;
+  border: var(--border-w) solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-muted);
+  min-height: 32px;
+}
+
+.chip[aria-pressed="true"],
+.chip.active {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: var(--accent);
+}
+
+.check-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.check-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.check-row input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ============ Left Rail Fields ============ */
+.project-name-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: var(--border-w) solid var(--line-strong);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.project-name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+
+.field input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: var(--border-w) solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.words-input {
+  width: 100%;
+  min-height: 200px;
+  padding: 10px 12px;
+  resize: vertical;
+  border: var(--border-w) solid var(--line-strong);
+  background: var(--surface);
+  font: 12px/1.6 var(--f-mono);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.words-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.msg {
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--accent-tint-wash);
+  border: 1px solid var(--accent-tint-rule);
+  padding: 8px 10px;
+  margin: 12px 0 0;
+  line-height: 1.45;
+}
+
+.msg:empty { display: none; }
+
+/* ============ Topic Suggestions (left rail) ============ */
+.suggest-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.suggest-topic { flex: 1; min-width: 0; }
+
+.suggest-count { width: auto; }
+
+.suggest-count input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: var(--border-w) solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.suggest-topic input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: var(--border-w) solid var(--line);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.suggest-controls .btn-s { width: 100%; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.suggestbox {
+  margin-top: 10px;
+  border: var(--border-w) solid var(--line);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.suggest-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.suggest-actions .btn-s {
+  flex: 1;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 11px;
+}
+
+.suggestbox > .hint {
+  font-size: 11px;
+  margin: 8px 0;
+}
+
+.suggest-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.wordopt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border-bottom: var(--border-w) solid var(--line);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wordopt input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ============ Centre Rail ============ */
+.center-header {
+  padding: 0 0 12px 0;
+  flex-shrink: 0;
+}
+
+.page-heading {
+  margin-bottom: 4px;
+}
+
+/* The editorial full stop lives in CSS so the text node stays exactly what
+   the user typed; print strips it and shows the title verbatim. */
+.center-header.has-title #toolHead::after { content: "."; }
+
+.canvas-wrap {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  min-width: 0;
+}
+
+.canvas-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.canvas-stage {
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 20px;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.empty-state {
+  width: min(420px, 76vw);
+  padding: 56px 28px;
+  text-align: center;
+}
+
+.empty-title {
+  font: 22px/1.2 var(--f-serif);
+  color: var(--ink);
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.pagecap {
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-top: 12px;
+  flex-shrink: 0;
+}
+
+.seedline {
+  margin-top: 4px;
+}
+
+#seed-use {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface);
+  border: var(--border-w) solid var(--line-strong);
+  padding: 4px 10px;
+  min-height: 32px;
+  vertical-align: middle;
+}
+
+#seed-use:hover { background: var(--desk); }
+
+#seed-use:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ============ Grid ============ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 12), var(--cell, 2.4rem));
+  width: max-content;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  font-family: var(--f-sans);
+}
+
+.cell {
+  width: var(--cell, 2.4rem);
+  height: var(--cell, 2.4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: calc(var(--cell, 2.4rem) * 0.52);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+/* ============ Answer Key (centre rail, below a dashed rule) ============ */
+.answers {
+  margin-top: 8px;
+  border-top: 1px dashed var(--line-strong);
+  padding-top: 16px;
+  flex-shrink: 0;
+}
+
+.answerlist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  columns: 2;
+  column-gap: 28px;
+  font-size: 12px;
+}
+
+.answerlist li { break-inside: avoid; padding: 4px 0; }
+
+.w { font-weight: 600; letter-spacing: 0.05em; }
+
+/* ============ Right Rail Cards ============ */
+.card {
+  background: var(--desk);
+  padding: 16px;
+  border: var(--border-w) solid var(--line);
+}
+
+.card-title {
+  font: 18px/1.2 var(--f-serif);
+  color: var(--ink);
+  margin: 0 0 12px 0;
+}
+
+.wordlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+}
+
+.wordlist li {
+  padding: 7px 0;
+  border-bottom: var(--border-w) solid var(--line);
+}
+
+.wordlist li:last-child { border-bottom: none; }
+
+/* ============ Alerts (Not placed / Check before printing) ============ */
+.alerts-panel {
+  font-size: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.alerts-panel.has-issues {
+  background: var(--accent-tint-wash);
+  border: 1px solid var(--accent-tint-rule);
+}
+
+.alerts-panel.no-issues {
+  background: var(--info-tint);
+  border: 1px solid var(--info-wash);
+}
+
+.warnbox h3 {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.warnbox ul { list-style: none; margin: 0; padding: 0; }
+
+.warnbox li { padding: 2px 0; line-height: 1.35; }
+
+.warnbox:not([hidden]) + .warnbox:not([hidden]) {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--accent-tint-rule);
+}
+
+.check-ok {
+  color: var(--info);
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ============ Print: A4, page 1 puzzle + words, page 2 answer key ============ */
+@media print {
+  @page { size: 210mm 297mm; margin: 14mm; }
+
+  /* nothing on screen is printable until a puzzle actually exists */
+  body:not(.has-puzzle) #app { display: none !important; }
+
+  html, body {
     background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 1.1em 1.2em;
-    display: flex;
-    flex-direction: column;
-    gap: 0.9em;
-  }
-  label.big { font-weight: 600; display: flex; flex-direction: column; gap: 0.25em; }
-  textarea, input[type="number"], input[type="text"] {
-    font: inherit;
-    font-size: 16px;
-    padding: 0.5em 0.6em;
-    border: 1px solid #b9b4a9;
-    border-radius: 8px;
-    width: 100%;
-    background: #fff;
-    color: var(--ink);
-  }
-  textarea { min-height: 9em; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  .row { display: flex; flex-wrap: wrap; gap: 1em; }
-  .row label { flex: 1 1 8em; display: flex; flex-direction: column; gap: 0.25em; font-weight: 600; }
-  .checks label { flex: 0 1 auto; flex-direction: row; align-items: center; gap: 0.5em; font-weight: 500; }
-  input[type="checkbox"] { width: 1.25em; height: 1.25em; }
-  .buttons { gap: 0.8em; }
-  button {
-    font: inherit;
-    font-size: 1em;
-    padding: 0.55em 1.3em;
-    border-radius: 8px;
-    border: 1px solid var(--accent);
-    cursor: pointer;
-  }
-  button.primary { background: var(--accent); color: #fff; }
-  button.primary:hover { background: #1b4076; }
-  #print-btn, #copy-btn { background: #fff; color: var(--accent); }
-
-  .msg {
-    color: #8a4b00;
-    background: #fff4e0;
-    border: 1px solid #e8c98f;
-    border-radius: 8px;
-    padding: 0.5em 0.8em;
-    margin: 0;
-  }
-  .msg:empty { padding: 0; border-color: transparent; background: none; }
-
-  /* topic suggestions */
-  #suggestblock h2 { margin: 0 0 0.1em; font-size: 1.05em; }
-  .suggest-controls { align-items: flex-end; }
-  .suggest-controls label { flex: 1 1 9em; }
-  .suggest-controls label.wcount { flex: 0 1 6.5em; }
-  .chips { display: flex; flex-wrap: wrap; gap: 0.4em; }
-  .chips button { font-size: 0.85em; padding: 0.3em 0.75em; background: #fff; color: var(--accent); }
-  .suggestbox { border: 1px solid var(--line); border-radius: 8px; padding: 0.5em 0.9em 0.7em; }
-  .suggest-actions { display: flex; flex-wrap: wrap; gap: 0.6em; }
-  .suggest-actions button { font-size: 0.9em; padding: 0.4em 0.9em; background: #fff; color: var(--accent); }
-  .suggestbox p.hint { margin: 0.15em 0 0.4em; }
-  .suggestlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(9em, 1fr)); column-gap: 0.8em; }
-  .wordopt {
-    display: flex;
-    align-items: center;
-    gap: 0.55em;
-    min-height: 44px;
-    border-bottom: 1px solid var(--line);
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-  }
-
-  .output { margin-top: 1.5em; }
-  .puzzle-title { text-align: center; margin: 0 0 0.6em; }
-  .gridwrap { overflow-x: auto; padding-bottom: 0.4em; }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(var(--cols, 12), var(--cell, 2.4rem));
-    width: max-content;
-    margin: 0 auto;
-    background: #fff;
-    border: 2px solid #333;
-  }
-  .cell {
-    width: var(--cell, 2.4rem);
-    height: var(--cell, 2.4rem);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: calc(var(--cell, 2.4rem) * 0.52);
-    border-right: 1px solid #cfcabf;
-    border-bottom: 1px solid #cfcabf;
-  }
-  .stats { text-align: center; color: var(--soft); }
-  .seedline { text-align: center; color: var(--soft); margin: 0.2em 0 0; }
-  .seedline button {
-    font-size: 0.95em;
-    font-weight: 600;
-    padding: 0.55em 1em;
-    background: #fff;
-    color: var(--accent);
-    vertical-align: middle;
-  }
-  .seedline button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  .wordlist {
-    list-style: none;
     margin: 0;
     padding: 0;
-    columns: 3;
-    column-gap: 2em;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-  }
-  .wordlist li { break-inside: avoid; padding: 0.15em 0; }
-
-  .warnbox { border: 2px solid #a4494185; background: #fdf0ef; border-radius: 10px; padding: 0.8em 1em; margin-top: 1.2em; }
-  .warnbox h2 { margin: 0 0 0.3em; font-size: 1.05em; }
-  .warnbox ul { list-style: none; margin: 0; padding: 0; }
-  .warnbox li { padding: 0.15em 0; }
-
-  .answers { margin-top: 1.6em; border-top: 2px dashed var(--line); padding-top: 1em; }
-  .note { color: var(--soft); font-size: 0.9em; margin: 0.2em 0 0.8em; }
-  .answerlist { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 2.5em; font-size: 0.95em; }
-  .answerlist li { break-inside: avoid; padding: 0.18em 0; }
-  .answerlist .w, .warnbox .w { font-weight: 700; letter-spacing: 0.05em; }
-
-  .hidden { display: none; }
-
-  @media (max-width: 640px) {
-    .wordlist { columns: 2; }
-    .answerlist { columns: 1; }
   }
 
-  @media print {
-    @page { size: A4; margin: 14mm; }
-    body { background: #fff; padding: 0; }
-    .page-head, .controls, .no-print, .stats { display: none !important; }
-    .output { margin: 0; max-width: none; }
-    .gridwrap { overflow: visible; padding: 0; }
-    .grid {
-      /* inline --cell comes from the screen sizing; force a print-fitting size */
-      --cell: min(calc(170mm / var(--cols, 12)), 30px) !important;
-      border-color: #000;
-    }
-    .cell { color: #000; border-color: #9a9a9a; }
-    .wordsection h2 { margin-top: 1em; }
-    .wordlist { columns: 4; }
-    .answers { page-break-before: always; border-top: none; padding-top: 0; }
-    .warnbox { background: none; border: 1.5pt solid #000; }
+  #app { height: auto; overflow: visible; }
+
+  .header, .rail-left, #alertsCard, #emptyState, #stats, #seedused, #wordsEmpty {
+    display: none !important;
   }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Word list lives in the right rail on screen; promote it into the
+     print flow between the grid and the answer key. Exactly one copy. */
+  .rail-center, .rail-right { display: contents; }
+
+  .center-header { order: 1; padding: 0; margin: 0 0 6mm; }
+  .center-header:not(.has-title) { display: none; }
+
+  #toolHead {
+    font-size: 21pt;
+    color: #000;
+    margin: 0;
+  }
+
+  /* printed title is exactly what the user typed — no added punctuation */
+  .center-header.has-title #toolHead::after { content: none; }
+
+  .canvas-wrap { order: 2; padding: 0; }
+
+  .canvas-scroll { overflow: visible; padding: 0; }
+
+  .canvas-stage {
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .grid {
+    /* inline --cell comes from the screen sizing; force a print-fitting size */
+    --cell: min(calc(170mm / var(--cols, 12)), 30px) !important;
+    border-color: #000;
+  }
+
+  .cell { color: #000; border-color: #9a9a9a; }
+
+  #wordCard {
+    order: 3;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 10mm 0 0;
+  }
+
+  #wordCard .card-title { color: #000; }
+
+  .wordlist { columns: 4; column-gap: 2em; }
+
+  .wordlist li { border-bottom: none; padding: 2px 0; }
+
+  #answers {
+    order: 4;
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+    page-break-before: always;
+    break-before: page;
+  }
+
+  #answers .section-title { color: #000; }
+}
+
+/* ============ Responsive: rails stack below 900px ============ */
+@media (max-width: 900px) {
+  /* Scroll like an ordinary page: no fixed-height app frame (iOS trap).
+     The topic tick-list keeps its own max-height scroller. */
+  #app {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .main {
+    /* minmax(0, 1fr): a bare 1fr track's auto minimum is min-content, which
+       the fixed-size grid cells blow up and #app then clips. */
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  .rail-left {
+    order: 1;
+    min-width: 0;
+    border-right: none;
+    border-bottom: var(--border-w) solid var(--line);
+    padding: 16px;
+    overflow: visible;
+  }
+
+  .rail-center {
+    order: 2;
+    min-width: 0;
+    padding: 16px;
+    overflow: visible;
+  }
+
+  .rail-right {
+    order: 3;
+    min-width: 0;
+    border-left: none;
+    border-top: var(--border-w) solid var(--line);
+    padding: 16px;
+    overflow: visible;
+  }
+
+  /* An over-wide grid must scroll inside .canvas-scroll, never widen the
+     page: cap the sheet to the scrollport. */
+  .canvas-stage { max-width: 100%; }
+
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--header-h);
+    padding: 12px 16px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* 44px touch targets on touch-sized screens */
+  .chip { min-height: 44px; }
+
+  .check-row label { min-height: 44px; }
+
+  .check-row input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .field input,
+  .suggest-topic input,
+  .suggest-count input {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS focus zoom */
+  }
+
+  .project-name-input { font-size: 16px; }
+
+  .words-input { font-size: 16px; }
+
+  #seed-use { min-height: 44px; }
+
+  .suggest-actions .btn-s { min-height: 44px; }
+
+  .empty-state { width: min(420px, 86vw); }
+}
 </style>
 </head>
 <body>
 
-<header class="page-head">
-  <h1>Word Search Maker</h1>
-  <p>Type your words, pick a size, press Generate — then print it.</p>
-</header>
+<div id="app">
 
-<form id="puzzle-form" class="controls" autocomplete="off">
-  <label class="big" for="words">Words
-    <span class="hint">one per line — commas or spaces also work</span>
-  </label>
-  <textarea id="words" rows="7" spellcheck="false" placeholder="MOON&#10;LANTERN&#10;STAMP"></textarea>
-
-  <div id="suggestblock">
-    <h2>Or pick words from a topic</h2>
-    <div class="row suggest-controls">
-      <label>Topic
-        <span class="hint">from the built-in word bank</span>
-        <input type="text" id="topic" placeholder="e.g. autumn">
-      </label>
-      <label class="wcount">How many
-        <input type="number" id="topic-count" min="3" max="20" step="1" value="12">
-      </label>
-      <button type="button" id="suggest-btn">Suggest words</button>
+  <!-- Header bar -->
+  <header class="header">
+    <div class="header-brand">
+      <img src="assets/word-game.png" alt="" class="brand-icon" width="28" height="28">
+      <div class="brand-name">Word Search</div>
     </div>
-    <p id="suggest-msg" class="msg" role="status"></p>
-    <div id="suggestchips" class="chips hidden"></div>
-    <div id="suggestbox" class="suggestbox hidden">
-      <div class="suggest-actions">
-        <button type="button" id="untick-btn">Untick all</button>
-        <button type="button" id="clear-btn">Clear suggestions</button>
+
+    <div class="header-actions">
+      <!-- Options dropdown -->
+      <div class="dropdown" id="optionsDropdown">
+        <button type="button" class="btn-s btn-icon dropdown-trigger" id="bOptions" aria-haspopup="true" aria-expanded="false">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.33 5.33h5.34"/><path d="M1.33 5.33h2.67"/><path d="M12 10.67h2.67"/><path d="M1.33 10.67h5.34"/><circle cx="6" cy="5.33" r="1.33"/><circle cx="10" cy="10.67" r="1.33"/></svg>
+          <span>Options</span>
+          <svg class="icon dropdown-caret-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4l4 -4"/></svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" role="menu" id="optionsMenu" hidden>
+          <button type="button" class="dropdown-item" data-action="download" role="menuitem">Download answer key as .txt</button>
+          <button type="button" class="dropdown-item" data-action="clear" role="menuitem">Clear everything</button>
+        </div>
       </div>
-      <p class="hint">Ticked words are added to the Words box above; unticked ones are left out of the puzzle. Any words you typed yourself stay — clear that box first for a puzzle built only from this topic.</p>
-      <div id="suggestlist" class="suggestlist"></div>
+
+      <!-- Save as PDF (prints A4: puzzle + words, then answer key) -->
+      <button type="button" class="btn-primary btn-icon" id="bPrint" disabled title="Create a puzzle first">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.67 10.67v1.33a2 2 0 0 0 2 2h6.66a2 2 0 0 0 2 -2v-1.33"/><path d="M8 2.67v8"/><path d="M5.33 8l2.67 2.67l2.67 -2.67"/></svg>
+        <span>Save as PDF</span>
+      </button>
     </div>
-  </div>
+  </header>
 
-  <div class="row">
-    <label>Rows
-      <input type="number" id="rows" min="5" max="30" step="1" value="12">
-    </label>
-    <label>Columns
-      <input type="number" id="cols" min="5" max="30" step="1" value="12">
-    </label>
-    <label>Seed
-      <span class="hint">optional — same seed, same puzzle</span>
-      <input type="number" id="seed" step="1">
-    </label>
-  </div>
+  <!-- Main three-rail layout -->
+  <main class="main">
 
-  <div class="row checks">
-    <label><input type="checkbox" id="diagonals" checked> Allow diagonals</label>
-    <label><input type="checkbox" id="backwards" checked> Allow backwards</label>
-  </div>
+    <!-- Left rail: controls -->
+    <aside class="rail rail-left">
+      <form id="puzzle-form" autocomplete="off">
+        <section class="rail-section">
+          <label class="section-title" for="title">Puzzle Title</label>
+          <input type="text" class="project-name-input" id="title" placeholder="Give name to your puzzle here">
+        </section>
 
-  <label class="big" for="title">Puzzle title
-    <span class="hint">optional — prints above the grid</span>
-  </label>
-  <input type="text" id="title" placeholder="Autumn word search">
+        <section class="rail-section">
+          <h3 class="section-title">Puzzle Layout</h3>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="rows">Rows</label>
+              <input type="number" id="rows" min="5" max="30" step="1" value="12">
+            </div>
+            <div class="field">
+              <label class="field-label" for="cols">Columns</label>
+              <input type="number" id="cols" min="5" max="30" step="1" value="12">
+            </div>
+          </div>
+        </section>
 
-  <div class="row buttons">
-    <button type="submit" class="primary">Generate</button>
-    <button type="button" id="print-btn" class="no-print">Print</button>
-    <button type="button" id="copy-btn" class="no-print">Copy answer key</button>
-  </div>
-  <p id="msg" class="msg" role="status"></p>
-</form>
+        <section class="rail-section">
+          <label class="section-title" for="seed">Seed</label>
+          <input type="number" class="field-input" id="seed" step="1" style="width:100%;min-height:36px;padding:6px 10px;border:var(--border-w) solid var(--line);background:var(--surface);font-size:13px;color:var(--ink);">
+          <p class="hint">optional — same seed, same puzzle</p>
+        </section>
 
-<main id="output" class="output hidden">
-  <h2 id="puzzle-title" class="puzzle-title hidden"></h2>
+        <section class="rail-section">
+          <div class="check-row">
+            <label><input type="checkbox" id="diagonals" checked> Allow diagonals</label>
+            <label><input type="checkbox" id="backwards" checked> Allow backwards</label>
+          </div>
+        </section>
 
-  <div class="gridwrap">
-    <div id="grid" class="grid" aria-label="word search grid"></div>
-  </div>
-  <p id="stats" class="stats"></p>
-  <p id="seedused" class="seedline no-print hidden">Seed used:
-    <button type="button" id="seed-use"></button>
-    <span class="hint" id="seed-hint">tap the number to put it in the Seed box</span>
-  </p>
+        <section class="rail-section">
+          <label class="section-title" for="words">Words</label>
+          <p class="hint" style="margin:0 0 6px;">one per line — commas or spaces also work</p>
+          <textarea id="words" class="words-input" rows="8" spellcheck="false" placeholder="MOON&#10;LANTERN&#10;STAMP"></textarea>
+        </section>
 
-  <section class="wordsection">
-    <h2>Find these words</h2>
-    <ul id="wordlist" class="wordlist"></ul>
-  </section>
+        <section class="rail-section">
+          <h3 class="section-title">Pick from a topic</h3>
+          <div class="suggest-controls">
+            <div class="suggest-topic">
+              <label class="field-label" for="topic">Topic from our word bank</label>
+              <input type="text" id="topic" placeholder="e.g. autumn">
+            </div>
+            <div class="suggest-count">
+              <label class="field-label" for="topic-count">How many</label>
+              <input type="number" id="topic-count" min="3" max="20" step="1" value="12">
+            </div>
+            <button type="button" class="btn-s" id="suggest-btn">Suggest</button>
+          </div>
+          <p id="suggest-msg" class="msg" role="status"></p>
+          <div id="suggestchips" class="chips" hidden></div>
+          <div id="suggestbox" class="suggestbox" hidden>
+            <div class="suggest-actions">
+              <button type="button" class="btn-s" id="untick-btn">Untick all</button>
+              <button type="button" class="btn-s" id="clear-btn">Clear suggestions</button>
+            </div>
+            <p class="hint">Ticked words are added to the Words box above; unticked ones are left out of the puzzle. Any words you typed yourself stay — clear that box first for a puzzle built only from this topic.</p>
+            <div class="suggest-scroll">
+              <div id="suggestlist"></div>
+            </div>
+          </div>
+        </section>
 
-  <div id="skippedbox" class="warnbox hidden">
-    <h2>Not placed</h2>
-    <ul id="skippedlist"></ul>
-  </div>
+        <section class="rail-section">
+          <button type="submit" class="btn-accent" id="generate-btn">Create my puzzle</button>
+          <p id="msg" class="msg" role="status"></p>
+        </section>
+      </form>
+    </aside>
 
-  <div id="conflictbox" class="warnbox hidden">
-    <h2>Check before printing</h2>
-    <ul id="conflictlist"></ul>
-  </div>
+    <!-- Centre rail: the puzzle -->
+    <div class="rail rail-center">
+      <div class="center-header" id="centerHeader">
+        <h2 class="display-headline page-heading" id="toolHead">Your puzzle.</h2>
+      </div>
 
-  <section class="answers">
-    <h2>Answer key</h2>
-    <p class="note">Rows are counted from the top and columns from the left, starting at 1.
-      The direction shows which way to read each word.</p>
-    <ul id="answerlist" class="answerlist"></ul>
-  </section>
-</main>
+      <div class="canvas-wrap">
+        <div class="canvas-scroll">
+          <div class="canvas-stage">
+            <div class="empty-state" id="emptyState">
+              <h3 class="empty-title">No puzzle yet.</h3>
+              <p>Type your words in the left rail — or pick them from a topic — then press Create&nbsp;my&nbsp;puzzle.</p>
+            </div>
+            <div id="grid" class="grid" aria-label="word search grid" hidden></div>
+          </div>
+        </div>
+        <p class="pagecap" id="stats"></p>
+        <p class="pagecap seedline" id="seedused" hidden>Seed used:
+          <button type="button" id="seed-use"></button>
+          <span class="hint" id="seed-hint">tap the number to put it in the Seed box</span>
+        </p>
+      </div>
+
+      <section class="answers" id="answers" hidden>
+        <h3 class="section-title">Answer key</h3>
+        <p class="note">Rows are counted from the top and columns from the left, starting at 1.
+          The direction shows which way to read each word.</p>
+        <ul id="answerlist" class="answerlist"></ul>
+      </section>
+    </div>
+
+    <!-- Right rail: word list + warnings -->
+    <aside class="rail rail-right">
+      <section class="rail-section card" id="wordCard">
+        <h3 class="card-title">Find these words</h3>
+        <p class="explainer" id="wordsEmpty">Generate a puzzle and the words to find will be listed here.</p>
+        <ul id="wordlist" class="wordlist"></ul>
+      </section>
+
+      <section class="rail-section card" id="alertsCard" hidden>
+        <div class="micro-label">Before you print</div>
+        <div class="alerts-panel" id="alertsPanel">
+          <div id="skippedbox" class="warnbox" hidden>
+            <h3>Not placed</h3>
+            <ul id="skippedlist"></ul>
+          </div>
+          <div id="conflictbox" class="warnbox" hidden>
+            <h3>Check before printing</h3>
+            <ul id="conflictlist"></ul>
+          </div>
+          <p class="check-ok" id="allclear" hidden>Everything placed — nothing to fix before printing.</p>
+        </div>
+      </section>
+    </aside>
+
+  </main>
+</div>
 
 <script>
 "use strict";
@@ -293,7 +1140,6 @@
  * if it is empty or already holds the same letter, leftovers
  * filled with random uppercase letters.
  * ============================================================ */
-
 var ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 var ALL_DIRS = [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
 var DIR_NAMES = {
@@ -760,6 +1606,7 @@ var WS = { generatePuzzle: generatePuzzle, verifyPlacements: verifyPlacements, n
 if (typeof module !== "undefined" && module.exports) { module.exports = WS; }
 if (typeof window !== "undefined") { window.WS = WS; }
 
+
 /* ============================================================
  * UI wiring
  * ============================================================ */
@@ -780,10 +1627,16 @@ function readBounded(id, label, notices) {
   return n;
 }
 
+/* Directions toggles are plain checkboxes. */
+function toggleOn(id) { return $(id).checked; }
+
 function applyCellSize() {
   if (!current) return;
+  var scroll = document.querySelector(".canvas-scroll");
   var avail = 680;
-  if (window.innerWidth) avail = Math.min(680, window.innerWidth - 40);
+  var w = scroll ? scroll.clientWidth : 0;
+  if (w > 80) avail = Math.min(680, w - 48);
+  else if (window.innerWidth) avail = Math.min(680, window.innerWidth - 40);
   var cell = Math.max(13, Math.min(44, Math.floor(avail / current.cols)));
   $("grid").style.setProperty("--cell", cell + "px");
 }
@@ -799,12 +1652,15 @@ function answerText(p) {
 }
 
 function renderPuzzle(result, rows, cols, wordsIn) {
-  $("output").classList.remove("hidden");
+  $("emptyState").hidden = true;
+  $("grid").hidden = false;
+  $("answers").hidden = false;
+  $("bPrint").disabled = false;
+  document.body.classList.add("has-puzzle");
 
   var title = $("title").value.trim();
-  var titleEl = $("puzzle-title");
-  titleEl.textContent = title;
-  titleEl.classList.toggle("hidden", !title);
+  $("toolHead").textContent = title ? title : "Your puzzle.";
+  $("centerHeader").classList.toggle("has-title", !!title);
 
   var gridEl = $("grid");
   gridEl.setAttribute("aria-label", "word search grid, " + rows + " rows, " + cols + " columns");
@@ -818,6 +1674,7 @@ function renderPuzzle(result, rows, cols, wordsIn) {
 
   $("wordlist").innerHTML = result.placements.map(function (p) { return p.word; })
     .sort(alpha).map(function (w) { return "<li>" + w + "</li>"; }).join("");
+  $("wordsEmpty").hidden = true;
 
   var key = result.placements.slice().sort(function (a, b) { return alpha(a.word, b.word); });
   $("answerlist").innerHTML = key.map(function (p) {
@@ -826,7 +1683,7 @@ function renderPuzzle(result, rows, cols, wordsIn) {
   }).join("");
 
   var sb = $("skippedbox");
-  sb.classList.toggle("hidden", result.skipped.length === 0);
+  sb.hidden = result.skipped.length === 0;
   $("skippedlist").innerHTML = result.skipped.map(function (s) {
     return "<li><span class='w'>" + s.word + "</span> — " + s.reason + "</li>";
   }).join("");
@@ -842,22 +1699,51 @@ function renderPuzzle(result, rows, cols, wordsIn) {
     problems.push("<li>Internal check found a mismatch in the answer key — please regenerate.</li>");
   }
   var cb = $("conflictbox");
-  cb.classList.toggle("hidden", problems.length === 0);
+  cb.hidden = problems.length === 0;
   $("conflictlist").innerHTML = problems.join("");
 
-  $("stats").textContent = result.placements.length + " of " + wordsIn.length + " words placed" +
-    (result.skipped.length ? " — see Not placed below" : "");
+  var hasIssues = result.skipped.length > 0 || problems.length > 0;
+  $("alertsCard").hidden = false;
+  var panel = $("alertsPanel");
+  panel.classList.toggle("has-issues", hasIssues);
+  panel.classList.toggle("no-issues", !hasIssues);
+  $("allclear").hidden = hasIssues;
+
+  $("stats").textContent = cols + " × " + rows + " · " + result.placements.length +
+    " of " + wordsIn.length + " words placed" +
+    (result.skipped.length ? " — see Not placed in the panel" : "");
 
   $("seed-use").textContent = result.seedUsed;
   $("seed-hint").textContent = "tap the number to put it in the Seed box";
-  $("seedused").classList.remove("hidden");
+  $("seedused").hidden = false;
+}
+
+function resetOutput() {
+  current = null;
+  $("bPrint").disabled = true;
+  document.body.classList.remove("has-puzzle");
+  $("grid").hidden = true;
+  $("grid").innerHTML = "";
+  $("answers").hidden = true;
+  $("emptyState").hidden = false;
+  $("stats").textContent = "";
+  $("seedused").hidden = true;
+  $("toolHead").textContent = "Your puzzle.";
+  $("centerHeader").classList.remove("has-title");
+  $("wordlist").innerHTML = "";
+  $("wordsEmpty").hidden = false;
+  $("alertsCard").hidden = true;
+  $("skippedbox").hidden = true;
+  $("conflictbox").hidden = true;
+  $("allclear").hidden = true;
+  $("alertsPanel").classList.remove("has-issues");
+  $("alertsPanel").classList.remove("no-issues");
 }
 
 function onGenerate() {
   var words = normalizeWords($("words").value);
   if (words.length === 0) {
-    current = null;
-    $("output").classList.add("hidden");
+    resetOutput();
     setMsg("Type some words first — one per line.");
     return;
   }
@@ -865,8 +1751,8 @@ function onGenerate() {
   var rows = readBounded("rows", "Rows", notices);
   var cols = readBounded("cols", "Columns", notices);
   var result = generatePuzzle(words, rows, cols, {
-    diagonals: $("diagonals").checked,
-    backwards: $("backwards").checked,
+    diagonals: toggleOn("diagonals"),
+    backwards: toggleOn("backwards"),
     seed: $("seed").value.trim()
   });
   current = { result: result, cols: cols };
@@ -875,32 +1761,121 @@ function onGenerate() {
   setMsg(notices.join(" "));
 }
 
-function copyAnswerKey() {
+/* Download filename follows the puzzle title: NFKD-strip diacritics,
+ * lowercase, non-[a-z0-9] runs collapse to one hyphen, cap the stem at
+ * ~60 chars at a hyphen boundary. */
+function answerKeyFilename() {
+  var slug = $("title").value.trim()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!slug) return "untitled-puzzle.txt";
+  if (slug.length > 60) {
+    slug = slug.slice(0, 60);
+    var cut = slug.lastIndexOf("-");
+    if (cut >= 20) slug = slug.slice(0, cut);
+    slug = slug.replace(/-+$/, "");
+  }
+  return slug + ".txt";
+}
+
+function downloadAnswerKey() {
   if (!current) { setMsg("Generate a puzzle first."); return; }
   var text = current.result.placements
     .slice().sort(function (a, b) { return alpha(a.word, b.word); })
     .map(answerText).join("\n");
-  function done() { setMsg("Answer key copied."); }
-  function fallback() {
-    var ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-      done();
-    } catch (err) {
-      setMsg("Couldn't copy automatically — select the answer key and copy it by hand.");
+  var blob = new Blob([text], { type: "text/plain" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = answerKeyFilename();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+  setMsg("Answer key downloaded as .txt.");
+}
+
+function clearAll() {
+  if (!window.confirm("Clear everything? Your words, topic picks, title and seed will be removed.")) return;
+  $("words").value = "";
+  $("title").value = "";
+  $("seed").value = "";
+  $("rows").value = "12";
+  $("cols").value = "12";
+  $("topic").value = "";
+  $("topic-count").value = "12";
+  suggested = [];
+  $("suggestbox").hidden = true;
+  $("suggestchips").hidden = true;
+  $("suggest-msg").textContent = "";
+  resetOutput();
+  try { localStorage.removeItem("wordsearch.inputs"); } catch (e) { /* fine to skip */ }
+  setMsg("");
+}
+
+/* ---- Options dropdown (Bookletter house pattern) ---- */
+
+var openDropdown = null;
+
+function closeAllDropdowns() {
+  document.querySelectorAll(".dropdown-menu").forEach(function (menu) {
+    menu.hidden = true;
+  });
+  document.querySelectorAll(".dropdown-trigger").forEach(function (btn) {
+    btn.setAttribute("aria-expanded", "false");
+  });
+  openDropdown = null;
+}
+
+function openDropdownMenu(dropdown, trigger) {
+  closeAllDropdowns();
+  var menu = dropdown.querySelector(".dropdown-menu");
+  if (menu) {
+    menu.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    openDropdown = dropdown;
+    var firstItem = menu.querySelector(".dropdown-item");
+    if (firstItem) firstItem.focus();
+  }
+}
+
+function wireDropdown() {
+  var dropdown = $("optionsDropdown");
+  var trigger = $("bOptions");
+  if (!dropdown || !trigger) return;
+  trigger.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (openDropdown === dropdown) {
+      closeAllDropdowns();
+    } else {
+      openDropdownMenu(dropdown, trigger);
     }
-    document.body.removeChild(ta);
-  }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(done, fallback);
-  } else {
-    fallback();
-  }
+  });
+  dropdown.addEventListener("click", function (e) {
+    var item = e.target.closest(".dropdown-item");
+    if (!item) return;
+    var action = item.dataset.action;
+    closeAllDropdowns();
+    if (action === "download") {
+      downloadAnswerKey();
+    } else if (action === "clear") {
+      clearAll();
+    }
+  });
+  document.addEventListener("click", function (e) {
+    if (openDropdown && !openDropdown.contains(e.target)) {
+      closeAllDropdowns();
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && openDropdown) {
+      closeAllDropdowns();
+      e.preventDefault();
+    }
+  });
 }
 
 /* ---- topic suggestions ---- */
@@ -939,18 +1914,18 @@ function onSuggest() {
   if (!res.matched) {
     $("suggest-msg").textContent = res.reason;
     renderChips();
-    $("suggestchips").classList.remove("hidden");
+    $("suggestchips").hidden = false;
     return;
   }
   $("suggest-msg").textContent = "";
-  $("suggestchips").classList.add("hidden");
+  $("suggestchips").hidden = true;
 
   var known = {};
   suggested.forEach(function (r) { known[r.word] = 1; });
   res.words.forEach(function (w) {
     if (!known[w]) { suggested.push({ word: w, ticked: true }); known[w] = 1; }
   });
-  $("suggestbox").classList.remove("hidden");
+  $("suggestbox").hidden = false;
   renderSuggestList();
   rebuildWords();
 }
@@ -977,7 +1952,7 @@ function wireSuggest() {
   });
   $("clear-btn").addEventListener("click", function () {
     suggested = [];
-    $("suggestbox").classList.add("hidden");
+    $("suggestbox").hidden = true;
     rebuildWords();
   });
   $("suggestchips").addEventListener("click", function (e) {
@@ -993,7 +1968,7 @@ function saveInputs() {
     localStorage.setItem("wordsearch.inputs", JSON.stringify({
       words: $("words").value, rows: $("rows").value, cols: $("cols").value,
       seed: $("seed").value, title: $("title").value,
-      diagonals: $("diagonals").checked, backwards: $("backwards").checked
+      diagonals: toggleOn("diagonals"), backwards: toggleOn("backwards")
     }));
   } catch (e) { /* Safari private browsing: fine to skip */ }
 }
@@ -1016,24 +1991,25 @@ function wireUI() {
   if (!form) return;
   loadSaved();
   form.addEventListener("submit", function (e) { e.preventDefault(); onGenerate(); });
-  $("print-btn").addEventListener("click", function () { window.print(); });
-  $("copy-btn").addEventListener("click", copyAnswerKey);
+  $("bPrint").addEventListener("click", function () {
+    window.print();
+    /* An embedding preview pane (iframe without allow-modals) silently ignores
+     * print(); point the user at the browser's own print command instead. */
+    if (window.self !== window.top) {
+      setMsg("Printing is blocked while this page is shown inside another app — open it in a browser tab, then press ⌘P (or Ctrl+P) to print.");
+    }
+  });
   $("seed-use").addEventListener("click", function () {
     if (!current) return;
     $("seed").value = current.result.seedUsed;
     $("seed-hint").textContent = "now in the Seed box — Generate will rebuild this exact puzzle";
   });
+  wireDropdown();
   wireSuggest();
   window.addEventListener("resize", scheduleResize);
 }
 
-if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", wireUI);
-  } else {
-    wireUI();
-  }
-}
+wireUI();
 </script>
 </body>
 </html>

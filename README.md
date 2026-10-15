@@ -22,7 +22,7 @@ Opening it, printing it, and the full list of inputs are further down.
   mushrooms, zodiac and two further astrology sets, and more. Topics answer to
   synonyms too, so "fall" finds autumn.
 - **Grid your size** — rows and columns set separately (5–30 each), with
-  diagonals and backwards words as toggles.
+  diagonals and backwards words as checkboxes.
 - **Reusable seeds** — the seed is optional; the same seed with the same words
   rebuilds the identical puzzle, so you can reprint a sheet or make several
   different sheets from one word list. The app shows the seed it used, so a
@@ -34,10 +34,13 @@ Opening it, printing it, and the full list of inputs are further down.
   letters are flagged.
 - **Print-ready** — A4 output ("Save as PDF" works), an optional puzzle title,
   and your last inputs are remembered.
-- **One file, no strings** — the web app is a single self-contained HTML page:
-  no install, no build step, no dependencies, no network. It works offline, on
-  desktop, tablet and phone. A small command-line script (`wordsearch.py`)
-  does the same job in the terminal.
+- **One file, no strings** — the page itself is a single self-contained HTML
+  file with all CSS and JavaScript inline: no install, no build step, no
+  network. The bundled Fraunces and DM Sans fonts sit next to it in
+  `web/assets/fonts/`; copy the HTML on its own and it still works — it just
+  falls back to your system's serif and sans. It works offline, on desktop,
+  tablet and phone. A small command-line script (`wordsearch.py`) does the same
+  job in the terminal.
 
 ## Usage
 
@@ -71,8 +74,8 @@ Output: letters grid, then a coordinate list per word (the answer key).
 - **No accounts, no tracking, no telemetry.** Nothing you type leaves your browser;
   there is no analytics script, no cookie, and no cookie banner because there is
   nothing to consent to.
-- **No server and no dependencies.** It is one HTML file that runs offline. Copy it
-  anywhere, keep it forever.
+- **No server and no dependencies.** The web app is one HTML file plus its
+  bundled fonts, running entirely offline. Copy it anywhere, keep it forever.
 
 ## Web app
 
@@ -83,23 +86,31 @@ placement rules as the CLI: longest word first, up to 500 placement attempts per
 word, a cell may be shared only when the letters match, and leftover cells get
 random letters.
 
-Inputs:
+Inputs (all in the left rail; the puzzle appears in the centre and the word
+list plus any warnings in the right rail):
 
 - **Words** — one per line; commas or spaces also work. Everything is
   uppercased, stripped of non-letters, and de-duplicated.
-- **Or pick words from a topic** — type a theme (e.g. autumn, tea) or any single word from the built-in offline word bank (e.g. pumpkin) and tick the suggestions; coverage is limited to the bundled topics.
-- **Rows / Columns** — grid size, 5–30 each (default 12 × 12).
-- **Allow diagonals / Allow backwards** — which directions words may run.
+- **Pick from a topic** — type a theme (e.g. autumn, tea) or any single word from the built-in offline word bank (e.g. pumpkin) and tick the suggestions, which appear under the input; coverage is limited to the bundled topics.
+- **Puzzle Layout** (Rows / Columns) — grid size, 5–30 each (default 12 × 12).
+- **Allow diagonals / Allow backwards** — checkboxes; which directions words may run.
 - **Seed** — optional. The same seed with the same inputs always rebuilds the
   identical puzzle; leave it blank for a fresh puzzle on every click.
-- Words that cannot be placed are listed on screen ("Not placed") with a reason,
+- **Create my puzzle** — builds the puzzle from whatever is in the box; it never
+  regenerates while you type.
+- Words that cannot be placed are listed on screen ("Not placed", right rail) with a reason,
   never silently dropped, and stray extra spellings created by the random
   letters are flagged.
 
-Printing (the Print button, or the browser's print dialog) gives A4 pages: the
-grid and word list on the first page, the answer key on its own page, with the
-form controls hidden. Rows and columns in the answer key are counted from the
-top-left, starting at 1.
+The header's **Options** menu downloads the answer key as a `.txt` file, named
+after the puzzle title, or clears everything (title, words, topic picks, seed,
+size). The seed shown under the grid can be tapped to reuse it.
+
+Printing (**Save as PDF**, which opens the browser's print dialog) gives A4
+pages: the grid and word list on the first page, the answer key on its own
+page, with the header and rails hidden. Rows and columns in the answer key are
+counted from the top-left, starting at 1. **Save as PDF** stays disabled until
+a puzzle has been created.
 
 ## How to open it (fastest first)
 
@@ -124,4 +135,11 @@ git pull                     # later, to pick up changes
 open web/index.html          # macOS; use xdg-open on Linux
 ```
 
-**Printing:** with a puzzle on screen press **Print** — A4 paper, page 1 is the puzzle, page 2 is the answer key. Choose "Save as PDF" if you would rather keep a copy.
+**Printing:** with a puzzle on screen press **Save as PDF** — A4 paper, page 1
+is the puzzle (title, grid, word list), page 2 is the answer key.
+
+## Credits
+
+Fraunces and DM Sans are bundled under the SIL Open Font License; the licence
+text is vendored at `web/assets/fonts/OFL.txt`. The interface icons are inline
+[Tabler](https://tabler.io/icons) icons, MIT licensed.
