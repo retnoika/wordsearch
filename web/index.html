@@ -500,6 +500,21 @@ input, textarea {
 
 .msg:empty { display: none; }
 
+.icon-credit {
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin: 12px 0 0;
+}
+
+.icon-credit a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.icon-credit a:hover {
+  text-decoration: underline;
+}
+
 /* ============ Topic Suggestions (left rail) ============ */
 .suggest-controls {
   display: flex;
@@ -1068,6 +1083,7 @@ input, textarea {
         <section class="rail-section">
           <button type="submit" class="btn-accent" id="generate-btn">Create my puzzle</button>
           <p id="msg" class="msg" role="status"></p>
+          <p class="icon-credit">Icon by <a href="https://www.flaticon.com/authors/graphics-hill" target="_blank" rel="noopener">Graphics Hill</a> · <a href="https://www.flaticon.com/free-icon/word-game_18410346" target="_blank" rel="noopener">Flaticon</a></p>
         </section>
       </form>
     </aside>

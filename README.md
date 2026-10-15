@@ -143,3 +143,8 @@ is the puzzle (title, grid, word list), page 2 is the answer key.
 Fraunces and DM Sans are bundled under the SIL Open Font License; the licence
 text is vendored at `web/assets/fonts/OFL.txt`. The interface icons are inline
 [Tabler](https://tabler.io/icons) icons, MIT licensed.
+
+The app icon is "Word game" by
+[Graphics Hill](https://www.flaticon.com/authors/graphics-hill) on
+[Flaticon](https://www.flaticon.com/free-icon/word-game_18410346), used under
+Flaticon's free licence, which requires this attribution.
