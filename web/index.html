@@ -708,25 +708,30 @@ input, textarea, select {
 
 /* ============ Grid ============ */
 .grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 12), var(--cell, 2.4rem));
-  width: max-content;
+  /* frame outside the drawing: content box is exactly cols x rows cells */
+  box-sizing: content-box;
+  width: calc(var(--cols, 12) * var(--cell, 2.4rem));
+  height: calc(var(--rows, 12) * var(--cell, 2.4rem));
   background: var(--paper);
   border: 2px solid var(--ink);
   font-family: var(--f-sans);
 }
 
-.cell {
-  width: var(--cell, 2.4rem);
-  height: var(--cell, 2.4rem);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: calc(var(--cell, 2.4rem) * 0.52);
-  border-right: 1px solid var(--line-strong);
-  border-bottom: 1px solid var(--line-strong);
+.gridsvg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
+
+/* hairlines between cells; non-scaling keeps them 1 screen px at every cell size */
+.gridline {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.gridletter { fill: var(--ink); }
 
 /* ============ Answer Key (centre rail, below a dashed rule) ============ */
 .answers {
@@ -939,7 +944,9 @@ input, textarea, select {
     --grid-max-h: 165mm;
   }
 
-  .cell { color: #000; border-color: #9a9a9a; }
+  .gridline { stroke: #9a9a9a; }
+
+  .gridletter { fill: #000; }
 
   /* ---- word block + footer (promoted right-rail card) ---- */
   #wordCard {
@@ -1174,6 +1181,8 @@ input, textarea, select {
         </button>
         <div class="dropdown-menu dropdown-menu-right" role="menu" id="optionsMenu" hidden>
           <button type="button" class="dropdown-item" data-action="download" role="menuitem">Download answer key as .txt</button>
+          <button type="button" class="dropdown-item" data-action="downloadsvg" role="menuitem">Download the puzzle as .svg</button>
+          <button type="button" class="dropdown-item" data-action="downloadkeysvg" role="menuitem">Download the answer key as .svg</button>
           <button type="button" class="dropdown-item" data-action="clear" role="menuitem">Clear everything</button>
         </div>
       </div>
@@ -1914,6 +1923,10 @@ function scheduleResize() {
   resizeTimer = setTimeout(function () { resizeTimer = null; applyCellSize(); }, 150);
 }
 
+var SVG_NS = "http://www.w3.org/2000/svg";
+/* mirrors --f-sans; written as an attribute so exported .svg files carry it */
+var GRID_FONT_STACK = "DM Sans, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
 function answerText(p) {
   return p.word + " — row " + (p.row + 1) + ", col " + (p.col + 1) + ", " + p.direction;
 }
@@ -1930,15 +1943,41 @@ function renderPuzzle(result, rows, cols, wordsIn) {
   $("centerHeader").classList.toggle("has-title", !!title);
 
   var gridEl = $("grid");
-  gridEl.setAttribute("aria-label", "word search grid, " + rows + " rows, " + cols + " columns");
-  var cells = [];
-  result.grid.forEach(function (row) {
-    row.forEach(function (ch) { cells.push('<div class="cell">' + ch + "</div>"); });
-  });
   gridEl.style.setProperty("--cols", String(cols));
   gridEl.style.setProperty("--rows", String(rows));
   applyCellSize();
-  gridEl.innerHTML = cells.join("");
+  /* Vector drawing, one user unit = one cell, so the viewBox is cols x rows
+     and everything inside is resolution-independent. Letters are real <text>
+     so they stay editable as type. Vertical centring uses an explicit
+     baseline offset (centre + ~0.35 em); dominant-baseline is unreliable
+     in Safari. */
+  var svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 " + cols + " " + rows);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "word search grid, " + rows + " rows, " + cols + " columns");
+  svg.setAttribute("class", "gridsvg");
+  var d = "";
+  for (var i = 1; i < cols; i++) d += "M" + i + " 0V" + rows;
+  for (var j = 1; j < rows; j++) d += "M0 " + j + "H" + cols;
+  var lines = document.createElementNS(SVG_NS, "path");
+  lines.setAttribute("d", d);
+  lines.setAttribute("class", "gridline");
+  svg.appendChild(lines);
+  result.grid.forEach(function (row, r) {
+    row.forEach(function (ch, c) {
+      var t = document.createElementNS(SVG_NS, "text");
+      t.setAttribute("x", c + 0.5);
+      t.setAttribute("y", r + 0.68);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-size", "0.52");
+      t.setAttribute("font-family", GRID_FONT_STACK);
+      t.setAttribute("font-weight", "600");
+      t.setAttribute("class", "gridletter");
+      t.textContent = ch;
+      svg.appendChild(t);
+    });
+  });
+  gridEl.replaceChildren(svg);
 
   $("printWordLabel").textContent = "Words to find · " + result.placements.length;
 
@@ -2039,22 +2078,23 @@ function onGenerate() {
 
 /* Download filename follows the puzzle title: NFKD-strip diacritics,
  * lowercase, non-[a-z0-9] runs collapse to one hyphen, cap the stem at
- * ~60 chars at a hyphen boundary. */
-function answerKeyFilename() {
+ * ~60 chars at a hyphen boundary. One slug rule, caller picks the extension
+ * and an optional stem suffix (e.g. "-answer-key"). */
+function puzzleFilename(ext, suffix) {
   var slug = $("title").value.trim()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  if (!slug) return "untitled-puzzle.txt";
+  if (!slug) return "untitled-puzzle" + (suffix || "") + "." + ext;
   if (slug.length > 60) {
     slug = slug.slice(0, 60);
     var cut = slug.lastIndexOf("-");
     if (cut >= 20) slug = slug.slice(0, cut);
     slug = slug.replace(/-+$/, "");
   }
-  return slug + ".txt";
+  return slug + (suffix || "") + "." + ext;
 }
 
 function downloadAnswerKey() {
@@ -2066,12 +2106,128 @@ function downloadAnswerKey() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href = url;
-  a.download = answerKeyFilename();
+  a.download = puzzleFilename("txt");
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(function () { URL.revokeObjectURL(url); }, 500);
   setMsg("Answer key downloaded as .txt.");
+}
+
+/* Print cell size in mm — mirrors the print block's
+   --cell: min(14mm, 178mm / cols, --grid-max-h / rows) with its 190mm /
+   165mm (name line on) height budgets. Kept in step with that rule. */
+function printCellMM(cols, rows) {
+  var maxH = document.body.classList.contains("name-line-on") ? 165 : 190;
+  return Math.min(14, 178 / cols, maxH / rows);
+}
+
+/* Shared standalone-clone pipeline: the on-screen drawing, print-sized, with
+   the CSS-only furniture (paper, frame, hairline/letter colours) written in
+   as attributes so the file stands alone. No external references; fonts are
+   named, not embedded — the design app substitutes. */
+function standaloneSvgClone() {
+  var src = document.querySelector("#grid svg.gridsvg");
+  if (!src) return null;
+  var vb = src.getAttribute("viewBox").split(/\s+/);
+  var cols = +vb[2], rows = +vb[3];
+  var cellMM = printCellMM(cols, rows);
+  var wMM = Math.round(cellMM * cols * 100) / 100;
+  var hMM = Math.round(cellMM * rows * 100) / 100;
+  var clone = src.cloneNode(true);
+  clone.removeAttribute("role");
+  clone.removeAttribute("aria-label");
+  clone.setAttribute("width", wMM + "mm");
+  clone.setAttribute("height", hMM + "mm");
+  var bg = document.createElementNS(SVG_NS, "rect");
+  bg.setAttribute("x", "0"); bg.setAttribute("y", "0");
+  bg.setAttribute("width", cols); bg.setAttribute("height", rows);
+  bg.setAttribute("fill", "#fff");
+  var frame = document.createElementNS(SVG_NS, "rect");
+  frame.setAttribute("x", "0"); frame.setAttribute("y", "0");
+  frame.setAttribute("width", cols); frame.setAttribute("height", rows);
+  frame.setAttribute("fill", "none");
+  frame.setAttribute("stroke", "#000");
+  frame.setAttribute("stroke-width", ((2.5 * 25.4 / 72) / cellMM).toFixed(4)); /* 2.5pt */
+  clone.insertBefore(bg, clone.firstChild);
+  clone.insertBefore(frame, bg.nextSibling);
+  var line = clone.querySelector(".gridline");
+  line.setAttribute("stroke", "#9a9a9a");
+  line.setAttribute("stroke-width", ((25.4 / 96) / cellMM).toFixed(4)); /* 1 CSS px */
+  line.removeAttribute("vector-effect"); /* fixed user-unit stroke: design apps ignore non-scaling strokes */
+  line.removeAttribute("class");
+  var letters = clone.querySelectorAll(".gridletter");
+  for (var i = 0; i < letters.length; i++) {
+    letters[i].setAttribute("fill", "#000");
+    letters[i].removeAttribute("class");
+  }
+  return { clone: clone, cols: cols, rows: rows, cellMM: cellMM };
+}
+
+function saveSvgDownload(xml, filename, msg) {
+  var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+  setMsg(msg);
+}
+
+function downloadPuzzleSvg() {
+  if (!current) { setMsg("Generate a puzzle first."); return; }
+  var made = standaloneSvgClone();
+  if (!made) { setMsg("Generate a puzzle first."); return; }
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    new XMLSerializer().serializeToString(made.clone);
+  saveSvgDownload(xml, puzzleFilename("svg"), "Puzzle downloaded as .svg.");
+}
+
+/* One outline per placed word, drawn ONLY in the exported key — the on-screen
+   and printed grids never contain these shapes. Same unit space as the grid
+   (one unit = one cell): the rect runs centre-to-centre of the first and last
+   cell of the word, inset so it clears the hairlines, rotated for diagonals.
+   Group id "answer-key" so the layer can be selected, recoloured or hidden
+   in a design app. */
+function downloadKeySvg() {
+  if (!current) { setMsg("Generate a puzzle first."); return; }
+  var made = standaloneSvgClone();
+  if (!made) { setMsg("Generate a puzzle first."); return; }
+  var INSET = 0.08;
+  var g = document.createElementNS(SVG_NS, "g");
+  g.setAttribute("id", "answer-key");
+  g.setAttribute("fill", "none");
+  g.setAttribute("stroke", "#DE505B"); /* --accent (--candy-pink-750) */
+  g.setAttribute("stroke-width", ((2 * 25.4 / 72) / made.cellMM).toFixed(4)); /* 2pt at print size */
+  current.result.placements.slice()
+    .sort(function (a, b) { return alpha(a.word, b.word); })
+    .forEach(function (p) {
+      var L = p.word.length;
+      /* the run is (L-1) steps of (dc,dr); diagonal steps are sqrt(2) units
+         long, so the rect must span (L-1)*len + 1 cells, not L cells, or it
+         stops short of the first/last letter on diagonals */
+      var stepLen = Math.sqrt(p.dc * p.dc + p.dr * p.dr);
+      var cx = p.col + 0.5 + ((L - 1) * p.dc) / 2;
+      var cy = p.row + 0.5 + ((L - 1) * p.dr) / 2;
+      var angle = Math.atan2(p.dr, p.dc) * 180 / Math.PI;
+      var w = (L - 1) * stepLen + 1 - 2 * INSET;
+      var h = 1 - 2 * INSET;
+      var r = document.createElementNS(SVG_NS, "rect");
+      r.setAttribute("x", (-w / 2).toFixed(4));
+      r.setAttribute("y", (-h / 2).toFixed(4));
+      r.setAttribute("width", w.toFixed(4));
+      r.setAttribute("height", h.toFixed(4));
+      r.setAttribute("rx", "0.12");
+      r.setAttribute("transform", "translate(" + cx + " " + cy + ") rotate(" + angle.toFixed(4) + ")");
+      g.appendChild(r);
+    });
+  made.clone.appendChild(g);
+  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    new XMLSerializer().serializeToString(made.clone);
+  saveSvgDownload(xml, puzzleFilename("svg", "-answer-key"), "Answer key downloaded as .svg.");
 }
 
 function clearAll() {
@@ -2137,6 +2293,10 @@ function wireDropdown() {
     closeAllDropdowns();
     if (action === "download") {
       downloadAnswerKey();
+    } else if (action === "downloadsvg") {
+      downloadPuzzleSvg();
+    } else if (action === "downloadkeysvg") {
+      downloadKeySvg();
     } else if (action === "clear") {
       clearAll();
     }

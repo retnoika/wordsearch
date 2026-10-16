@@ -113,9 +113,14 @@ list plus any warnings in the right rail):
   never silently dropped, and stray extra spellings created by the random
   letters are flagged.
 
-The header's **Options** menu downloads the answer key as a `.txt` file, named
-after the puzzle title, or clears everything (title, words, topic picks, seed,
-size). The seed shown under the grid can be tapped to reuse it.
+The header's **Options** menu downloads the puzzle as a `.svg`, the answer key
+as a `.svg` with every word outlined, or the answer key as a `.txt` — all named
+after the puzzle title (`untitled-puzzle` when the title is empty) — or clears
+everything (title, words, topic picks, seed, size). The `.svg` files are the
+grid as vector with the letters still editable text, sized in millimetres so
+they open at the printed size in a design app; in the key file the outlines sit
+in one `answer-key` layer, so they can be recoloured or hidden. The seed shown
+under the grid can be tapped to reuse it.
 
 Printing (**Save as PDF**, which opens the browser's print dialog) gives a
 composed A4 sheet — exactly two pages at every size from 5x5 to 30x30. Page 1
