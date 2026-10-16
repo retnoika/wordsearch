@@ -14,6 +14,11 @@ Opening it, printing it, and the full list of inputs are further down.
 
 ![The word search maker with a generated 12x12 puzzle](assets/screenshot.png)
 
+## Support my work
+Thank you for supporting my work on Word Search.
+
+<a href="https://www.buymeacoffee.com/retnoika"><img src="assets/bmac-matcha-latte@2x.png" alt="Buy me a matcha latte" width="236" height="50"></a>
+
 ## Features
 
 - **Words your way** — type your own (one per line; commas or spaces also work) or
