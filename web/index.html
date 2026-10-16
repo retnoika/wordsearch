@@ -1182,7 +1182,7 @@ input, textarea, select {
         <div class="dropdown-menu dropdown-menu-right" role="menu" id="optionsMenu" hidden>
           <button type="button" class="dropdown-item" data-action="download" role="menuitem">Download answer key as .txt</button>
           <button type="button" class="dropdown-item" data-action="downloadsvg" role="menuitem">Download the puzzle as .svg</button>
-          <button type="button" class="dropdown-item" data-action="downloadkeysvg" role="menuitem">Download the answer key as .svg</button>
+          <button type="button" class="dropdown-item" data-action="downloadpng" role="menuitem">Download the puzzle as .png</button>
           <button type="button" class="dropdown-item" data-action="clear" role="menuitem">Clear everything</button>
         </div>
       </div>
@@ -2078,23 +2078,22 @@ function onGenerate() {
 
 /* Download filename follows the puzzle title: NFKD-strip diacritics,
  * lowercase, non-[a-z0-9] runs collapse to one hyphen, cap the stem at
- * ~60 chars at a hyphen boundary. One slug rule, caller picks the extension
- * and an optional stem suffix (e.g. "-answer-key"). */
-function puzzleFilename(ext, suffix) {
+ * ~60 chars at a hyphen boundary. One slug rule, caller picks the extension. */
+function puzzleFilename(ext) {
   var slug = $("title").value.trim()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  if (!slug) return "untitled-puzzle" + (suffix || "") + "." + ext;
+  if (!slug) return "untitled-puzzle." + ext;
   if (slug.length > 60) {
     slug = slug.slice(0, 60);
     var cut = slug.lastIndexOf("-");
     if (cut >= 20) slug = slug.slice(0, cut);
     slug = slug.replace(/-+$/, "");
   }
-  return slug + (suffix || "") + "." + ext;
+  return slug + "." + ext;
 }
 
 function downloadAnswerKey() {
@@ -2164,8 +2163,7 @@ function standaloneSvgClone() {
   return { clone: clone, cols: cols, rows: rows, cellMM: cellMM };
 }
 
-function saveSvgDownload(xml, filename, msg) {
-  var blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+function saveBlobDownload(blob, filename, msg) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href = url;
@@ -2183,51 +2181,54 @@ function downloadPuzzleSvg() {
   if (!made) { setMsg("Generate a puzzle first."); return; }
   var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
     new XMLSerializer().serializeToString(made.clone);
-  saveSvgDownload(xml, puzzleFilename("svg"), "Puzzle downloaded as .svg.");
+  saveBlobDownload(new Blob([xml], { type: "image/svg+xml;charset=utf-8" }),
+    puzzleFilename("svg"), "Puzzle downloaded as .svg.");
 }
 
-/* One outline per placed word, drawn ONLY in the exported key — the on-screen
-   and printed grids never contain these shapes. Same unit space as the grid
-   (one unit = one cell): the rect runs centre-to-centre of the first and last
-   cell of the word, inset so it clears the hairlines, rotated for diagonals.
-   Group id "answer-key" so the layer can be selected, recoloured or hidden
-   in a design app. */
-function downloadKeySvg() {
+/* Raster twin of the .svg export: same print geometry (printCellMM), drawn on
+   an offscreen canvas at 300 dpi with the document's loaded DM Sans — an
+   SVG-in-an-<img> could not use the page's webfont and would silently fall
+   back to a serif. Printed weights: 2.5pt frame, 1px hairlines, black text. */
+function downloadPuzzlePng() {
   if (!current) { setMsg("Generate a puzzle first."); return; }
-  var made = standaloneSvgClone();
-  if (!made) { setMsg("Generate a puzzle first."); return; }
-  var INSET = 0.08;
-  var g = document.createElementNS(SVG_NS, "g");
-  g.setAttribute("id", "answer-key");
-  g.setAttribute("fill", "none");
-  g.setAttribute("stroke", "#DE505B"); /* --accent (--candy-pink-750) */
-  g.setAttribute("stroke-width", ((2 * 25.4 / 72) / made.cellMM).toFixed(4)); /* 2pt at print size */
-  current.result.placements.slice()
-    .sort(function (a, b) { return alpha(a.word, b.word); })
-    .forEach(function (p) {
-      var L = p.word.length;
-      /* the run is (L-1) steps of (dc,dr); diagonal steps are sqrt(2) units
-         long, so the rect must span (L-1)*len + 1 cells, not L cells, or it
-         stops short of the first/last letter on diagonals */
-      var stepLen = Math.sqrt(p.dc * p.dc + p.dr * p.dr);
-      var cx = p.col + 0.5 + ((L - 1) * p.dc) / 2;
-      var cy = p.row + 0.5 + ((L - 1) * p.dr) / 2;
-      var angle = Math.atan2(p.dr, p.dc) * 180 / Math.PI;
-      var w = (L - 1) * stepLen + 1 - 2 * INSET;
-      var h = 1 - 2 * INSET;
-      var r = document.createElementNS(SVG_NS, "rect");
-      r.setAttribute("x", (-w / 2).toFixed(4));
-      r.setAttribute("y", (-h / 2).toFixed(4));
-      r.setAttribute("width", w.toFixed(4));
-      r.setAttribute("height", h.toFixed(4));
-      r.setAttribute("rx", "0.12");
-      r.setAttribute("transform", "translate(" + cx + " " + cy + ") rotate(" + angle.toFixed(4) + ")");
-      g.appendChild(r);
+  var vb = document.querySelector("#grid svg.gridsvg").getAttribute("viewBox").split(/\s+/);
+  var cols = +vb[2], rows = +vb[3];
+  var cellMM = printCellMM(cols, rows);
+  var px = function (mm) { return mm / 25.4 * 300; };
+  var cell = px(cellMM);
+  var W = Math.round(px(cellMM * cols));
+  var H = Math.round(px(cellMM * rows));
+  document.fonts.load('600 ' + Math.round(cell * 0.52) + 'px "DM Sans"').then(function () {
+    var canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, W, H);
+    var frame = px(2.5 * 25.4 / 72);
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = frame;
+    ctx.strokeRect(frame / 2, frame / 2, W - frame, H - frame);
+    ctx.strokeStyle = "#9a9a9a";
+    ctx.lineWidth = px(25.4 / 96); /* the print hairline: 1 CSS px */
+    ctx.beginPath();
+    for (var i = 1; i < cols; i++) { ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, H); }
+    for (var j = 1; j < rows; j++) { ctx.moveTo(0, j * cell); ctx.lineTo(W, j * cell); }
+    ctx.stroke();
+    ctx.fillStyle = "#000";
+    ctx.font = '600 ' + (cell * 0.52).toFixed(2) + 'px "DM Sans", system-ui, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    current.result.grid.forEach(function (row, r) {
+      row.forEach(function (ch, c) {
+        /* same explicit baseline as the SVG: cell centre + ~0.35 em */
+        ctx.fillText(ch, (c + 0.5) * cell, (r + 0.68) * cell);
+      });
     });
-  made.clone.appendChild(g);
-  var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    new XMLSerializer().serializeToString(made.clone);
-  saveSvgDownload(xml, puzzleFilename("svg", "-answer-key"), "Answer key downloaded as .svg.");
+    canvas.toBlob(function (blob) {
+      saveBlobDownload(blob, puzzleFilename("png"), "Puzzle downloaded as .png.");
+    }, "image/png");
+  });
 }
 
 function clearAll() {
@@ -2295,8 +2296,8 @@ function wireDropdown() {
       downloadAnswerKey();
     } else if (action === "downloadsvg") {
       downloadPuzzleSvg();
-    } else if (action === "downloadkeysvg") {
-      downloadKeySvg();
+    } else if (action === "downloadpng") {
+      downloadPuzzlePng();
     } else if (action === "clear") {
       clearAll();
     }
