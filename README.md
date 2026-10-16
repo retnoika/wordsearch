@@ -158,6 +158,13 @@ git pull                     # later, to pick up changes
 open web/index.html          # macOS; use xdg-open on Linux
 ```
 
+**4. From a tagged release** — [Releases](../../releases/latest) carries the
+standalone `index.html` plus a zip of the whole app (page, fonts, licence), so
+you can take a fixed version rather than following `main`.
+
+Releases are tagged `vX.Y.Z`; what changed in each one is in
+[CHANGELOG.md](CHANGELOG.md).
+
 **Printing:** with a puzzle on screen press **Save as PDF** — A4 paper, exactly
 two pages: page 1 is the puzzle (header, grid, word list, footer), page 2 is
 the answer key, carrying the puzzle title so the key identifies its puzzle.
