@@ -3,11 +3,11 @@
 Notable changes to Word Search Maker. A release is the tagged state of
 `web/index.html` together with its vendored fonts — the app has no build step.
 
-## v1.0.0 — 16 October 2026
+## Unreleased
 
-First production release. Everything runs in the browser: no server, no account,
-no tracking, and nothing you type or make leaves your device. It also works
-straight from disk, offline.
+Not tagged yet. The app works and is in daily use, but the first release will be
+cut once the remaining fixes and additions are in. What follows is what it does
+today, and the limits to be aware of.
 
 ### Making a puzzle
 
