@@ -128,7 +128,7 @@ button {
   border-radius: var(--radius);
 }
 
-input, textarea {
+input, textarea, select {
   font: inherit;
   border-radius: var(--radius);
 }
@@ -463,7 +463,8 @@ input, textarea {
   margin-bottom: 4px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 36px;
   padding: 6px 10px;
@@ -471,6 +472,18 @@ input, textarea {
   background: var(--surface);
   font-size: 13px;
   color: var(--ink);
+}
+
+/* native dropdown styled like the text inputs: no UA chrome, drawn chevron */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23565A62' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
 }
 
 .words-input {
@@ -1110,6 +1123,7 @@ input, textarea {
   }
 
   .field input,
+  .field select,
   .suggest-topic input,
   .suggest-count input {
     min-height: 44px;
@@ -1190,12 +1204,66 @@ input, textarea {
           <h3 class="section-title">Puzzle Layout</h3>
           <div class="field-row">
             <div class="field">
-              <label class="field-label" for="rows">Rows</label>
-              <input type="number" id="rows" min="5" max="30" step="1" value="12">
+              <label class="field-label" for="rows">Rows (5-30)</label>
+              <select id="rows">
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12" selected>12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
+                <option value="20">20</option>
+                <option value="21">21</option>
+                <option value="22">22</option>
+                <option value="23">23</option>
+                <option value="24">24</option>
+                <option value="25">25</option>
+                <option value="26">26</option>
+                <option value="27">27</option>
+                <option value="28">28</option>
+                <option value="29">29</option>
+                <option value="30">30</option>
+              </select>
             </div>
             <div class="field">
-              <label class="field-label" for="cols">Columns</label>
-              <input type="number" id="cols" min="5" max="30" step="1" value="12">
+              <label class="field-label" for="cols">Columns (5-30)</label>
+              <select id="cols">
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12" selected>12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
+                <option value="20">20</option>
+                <option value="21">21</option>
+                <option value="22">22</option>
+                <option value="23">23</option>
+                <option value="24">24</option>
+                <option value="25">25</option>
+                <option value="26">26</option>
+                <option value="27">27</option>
+                <option value="28">28</option>
+                <option value="29">29</option>
+                <option value="30">30</option>
+              </select>
             </div>
           </div>
         </section>
@@ -2189,6 +2257,12 @@ function loadSaved() {
     var s = JSON.parse(raw);
     ["words", "rows", "cols", "seed", "title"].forEach(function (k) {
       if (typeof s[k] === "string" && $(k)) $(k).value = s[k];
+    });
+    /* rows/cols are dropdowns now: a saved value that matches no option
+       (out of range or junk from before the switch) leaves the select blank,
+       so fall back to the default instead of feeding parseInt("") -> NaN */
+    ["rows", "cols"].forEach(function (k) {
+      if ($(k).selectedIndex === -1) $(k).value = "12";
     });
     if (typeof s.diagonals === "boolean") $("diagonals").checked = s.diagonals;
     if (typeof s.backwards === "boolean") $("backwards").checked = s.backwards;

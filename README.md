@@ -21,7 +21,7 @@ Opening it, printing it, and the full list of inputs are further down.
   between them — autumn, tea, snail mail, garden, seeds, food, flowers, trees,
   mushrooms, zodiac and two further astrology sets, and more. Topics answer to
   synonyms too, so "fall" finds autumn.
-- **Grid your size** — rows and columns set separately (5–30 each), with
+- **Grid your size** — rows and columns chosen from dropdowns (5–30 each), with
   diagonals and backwards words as checkboxes.
 - **Reusable seeds** — the seed is optional; the same seed with the same words
   rebuilds the identical puzzle, so you can reprint a sheet or make several
@@ -94,7 +94,7 @@ list plus any warnings in the right rail):
 - **Words** — one per line; commas or spaces also work. Everything is
   uppercased, stripped of non-letters, and de-duplicated.
 - **Pick from a topic** — type a theme (e.g. autumn, tea) or any single word from the built-in offline word bank (e.g. pumpkin) and tick the suggestions, which appear under the input; coverage is limited to the bundled topics.
-- **Puzzle Layout** (Rows / Columns) — grid size, 5–30 each (default 12 × 12).
+- **Puzzle Layout** (Rows / Columns) — grid size chosen from dropdowns, 5–30 each (default 12 × 12).
 - **Print a name and date line** — a checkbox under Puzzle Title, off by
   default. When ticked, the printed sheet carries `Name ____` and `Date ____`
   blanks in its header for classroom use. It affects printing only, and it is
